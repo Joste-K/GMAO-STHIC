@@ -106,6 +106,27 @@ export interface Task {
   msgs?: TaskMsg[];
   dreal?: string | null;
   _id?: string;
+
+  // New custom fields
+  visibiliteClient?: boolean;
+  emailAvisClient?: boolean;
+  emailPlanifClient?: boolean;
+  motif?: string;
+  nomDemandeur?: string;
+  telDemandeur?: string;
+  numCommande?: string;
+  observation?: string;
+  photo?: string;
+  fac?: string; // 'A facturer' | 'Sous Garantie' | 'Maintenance' | 'Non facturable' | 'Facturée'
+  societe?: string;
+  prestations?: string;
+  installationEquipement?: string;
+  attente?: boolean; // Intervention en attente (OUI / NON)
+  source?: string;
+  debutIntervention?: string; // jj/mm/aaaa --:--
+  finIntervention?: string; // jj/mm/aaaa --:--
+  planningDetaille?: boolean; // OUI / NON
+  intervenants?: string;
 }
 
 export interface Materiel {

@@ -265,12 +265,12 @@ export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  // Otto AI Assistant State
+  // Joste AI Assistant State
   const [ottoOpen, setOttoOpen] = useState<boolean>(false);
   const [ottoMessages, setOttoMessages] = useState<Array<{ sender: "user" | "otto"; text: string; time: string }>>([
     {
       sender: "otto",
-      text: "👋 Bonjour ! Je suis Otto, votre assistant intelligent de la GMAO STHIC SERVICES. Inspiré par l'écosystème Huoltu, je suis là pour vous accompagner en temps réel ! Vous pouvez me demander de lister les sites, de diagnostiquer une panne de groupe, ou de consulter les seuils de vidange. Comment puis-je vous aider ?",
+      text: "👋 Bonjour ! Je suis Joste, votre assistant intelligent de la GMAO-STHIC. Je suis là pour vous accompagner en temps réel ! Vous pouvez me demander de lister les sites, de diagnostiquer une panne de groupe, ou de consulter les seuils de vidange. Comment puis-je vous aider ?",
       time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
     }
   ]);
@@ -318,16 +318,16 @@ export default function App() {
         reply = `📊 **Audit de Cohérence des Données Excel :**\n\nJ'ai analysé l'intégralité des sites du fichier Excel d'origine (\`Ets_TECNOSTREAM_POWER.xlsx\`) configurés dans le dictionnaire de puissance \`CONTENTKVA\`. \n\n* **Données Excel d'Origine (CONTENTKVA)** : **${excelLinked}** sites répertoriés.\n* **Base de l'Application (SEED_PARC)** : **${totalSites}** groupes électrogènes enregistrés.\n\n✅ **Résultat de l'Audit** : Tous les sites du fichier Excel d'origine font partie intégrante de cette application. Les valeurs de puissance nominale (kVA) ont été rigoureusement synchronisées pour chaque machine !`;
       } else if (lower.includes("panne") || lower.includes("urgence") || lower.includes("urgente") || lower.includes("p1")) {
         const activeUrgent = db.taches.filter(t => t.prio === "P1" && t.statut !== "Terminé");
-        reply = `🚨 **Suivi des Urgences GMAO :**\n\nNous recensons actuellement **${activeUrgent.length}** intervention(s) critique(s) active(s).\n\nPour une visibilité optimale inspirée de l'interface Huoltu, les interventions de priorité **P1** sont signalées par un badge **vif rouge "Urgente"** clignotant dans la liste des tâches (onglet **"Interventions"**).`;
+        reply = `🚨 **Suivi des Urgences GMAO :**\n\nNous recensons actuellement **${activeUrgent.length}** intervention(s) critique(s) active(s).\n\nPour une visibilité optimale, les interventions de priorité **P1** sont signalées par un badge **vif rouge "Urgente"** clignotant dans la liste des tâches (onglet **"Interventions"**).`;
       } else if (lower.includes("vidange") || lower.includes("preventive") || lower.includes("planning") || lower.includes("heures")) {
         reply = `🔧 **Planification & Maintenance Préventive :**\n\nLes alertes de vidange se déclenchent à l'approche du seuil de fonctionnement de **250 heures** (ou **350 heures** pour les moteurs industriels renforcés). Retrouvez toutes les échéances prédictives dans l'onglet **"Planning & Abos"** ou sous forme de diagrammes de charge dans le **"Bilan Global"**.`;
       } else if (lower.includes("magasin") || lower.includes("stock") || lower.includes("piece")) {
         const lowStock = db.magasin.filter(item => item.qte <= (item.seuilMin || 5));
         reply = `📦 **Gestion des Pièces & Consommables :**\n\nLe magasin de Pointe-Noire contient **${db.magasin.length} références** actives de filtres, huiles moteurs et batteries.\n\n⚠️ **Alerte réapprovisionnement** : **${lowStock.length}** pièces sont sous le seuil critique d'alerte. Vous pouvez émettre des bons de sortie ou d'entrée dans l'onglet **"Gestion Magasin"**.`;
-      } else if (lower.includes("huoltu") || lower.includes("design") || lower.includes("couleur") || lower.includes("interface")) {
-        reply = `🎨 **Intégration du Design Huoltu :**\n\nJ'ai appliqué la charte esthétique de l'application Houltu :\n- **Sidebar Haute-Fidélité Blanche** avec le badge de logo "hu" de couleur vive.\n- **Timeline Graphique Diagonale Rayée** pour le suivi visuel dynamique (En cours / Planifiée).\n- **Bouton d'interaction Otto** avec notification badge \`26\` en haut à droite.\n- **Drawer Contextuel d'Actions Rapides** pour clôturer, éditer ou consigner des messages d'interventions d'un clic !`;
+      } else if (lower.includes("design") || lower.includes("couleur") || lower.includes("interface") || lower.includes("charte")) {
+        reply = `🎨 **Charte Graphique & Ergonomie :**\n\nL'application intègre une interface moderne et hautement optimisée :\n- **Sidebar Haute-Fidélité Blanche** avec un badge de logo exclusif "GSJ" aux tons bleu et ardoise.\n- **Timeline Graphique Diagonale Rayée** pour le suivi visuel dynamique (En cours / Planifiée).\n- **Bouton d'interaction Joste** avec notification badge \`26\` en haut à droite.\n- **Drawer Contextuel d'Actions Rapides** pour clôturer, éditer ou consigner des messages d'interventions d'un clic !`;
       } else {
-        reply = `🤖 **Otto Assistant GMAO :**\n\nJe suis entraîné pour superviser la flotte de groupes électrogènes de Pointe-Noire.\n\nN'hésitez pas à me poser une question sur :\n- Les **"sites"** ou le **"fichier Excel"** (audit de données)\n- Les **"pannes"** ou les **"urgences"**\n- Les **"stocks"** du magasin\n- Le **"design Huoltu"** ou l'interface !`;
+        reply = `🤖 **Joste Assistant GMAO :**\n\nJe suis entraîné pour superviser la flotte de groupes électrogènes de Pointe-Noire.\n\nN'hésitez pas à me poser une question sur :\n- Les **"sites"** ou le **"fichier Excel"** (audit de données)\n- Les **"pannes"** ou les **"urgences"**\n- Les **"stocks"** du magasin\n- Le **"design"** ou la charte ergonomique de l'interface !`;
       }
 
       setOttoMessages(prev => [...prev, { sender: "otto", text: reply, time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) }]);
@@ -739,12 +739,12 @@ export default function App() {
         {/* Brand header */}
         <div className="h-14 px-5 flex items-center justify-between border-b border-slate-200 shrink-0 bg-white">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-orange-500 border border-orange-600 flex items-center justify-center font-extrabold text-xs text-white font-sans shrink-0 shadow-sm">
-              hu
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-slate-900 via-blue-900 to-indigo-800 border border-slate-800 flex items-center justify-center font-black text-xs text-white shrink-0 shadow-md">
+              GSJ
             </div>
             {sidebarOpen && (
               <div className="font-extrabold text-[12px] tracking-wide text-slate-800 uppercase truncate">
-                STHIC SERVICES
+                GMAO-STHIC Joste
               </div>
             )}
           </div>
@@ -849,21 +849,20 @@ export default function App() {
             >
               <Menu size={16} />
             </button>
-            <span className="text-slate-400 hidden md:inline font-mono font-bold uppercase tracking-wider text-[10px]">ERM / GMAO</span>
             <h1 className="text-sm font-bold text-slate-900 capitalize truncate">
               {menuItems.find(m => m.id === activeTab)?.label}
             </h1>
           </div>
 
-          {/* Quick status counters & Otto AI Assistant Button inspired by Huoltu */}
+          {/* Quick status counters & Joste AI Assistant Button */}
           <div className="flex items-center gap-3 text-xs font-semibold">
-            {/* Otto AI trigger */}
+            {/* Joste AI trigger */}
             <button
               onClick={() => setOttoOpen(true)}
               className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-50 text-blue-600 border border-blue-200 rounded-xl transition-all cursor-pointer shadow-2xs font-sans font-bold"
             >
               <Sparkles size={13} className="text-blue-500 animate-pulse" />
-              <span>Demandez à Otto !</span>
+              <span>Demandez à Joste !</span>
               <span className="bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ml-1">
                 26
               </span>
@@ -1062,7 +1061,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Sliding Otto AI Assistant Drawer inspired by Huoltu */}
+      {/* Sliding Otto AI Assistant Drawer */}
       {ottoOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[999] flex justify-end animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
@@ -1071,8 +1070,8 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <Sparkles size={16} className="text-blue-200 animate-bounce" />
                 <div>
-                  <h3 className="font-bold text-sm">Otto — Assistant Intelligent</h3>
-                  <p className="text-[10px] text-blue-200 font-medium">Inspiré par l'écosystème Huoltu</p>
+                  <h3 className="font-bold text-sm">Joste — Assistant Intelligent</h3>
+                  <p className="text-[10px] text-blue-200 font-medium">GMAO-STHIC — Assistant de flotte</p>
                 </div>
               </div>
               <button
@@ -1114,7 +1113,7 @@ export default function App() {
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-100" />
                     <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-200" />
-                    <span>Otto réfléchit...</span>
+                    <span>Joste réfléchit...</span>
                   </div>
                 </div>
               )}
@@ -1135,10 +1134,10 @@ export default function App() {
                 🚨 Urgences P1
               </button>
               <button
-                onClick={() => { setOttoInput("Comment fonctionne le design Huoltu ?"); }}
+                onClick={() => { setOttoInput("Présenter la charte graphique et ergonomie ?"); }}
                 className="text-[10px] font-bold bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"
               >
-                🎨 Design Huoltu
+                🎨 Charte Graphique
               </button>
             </div>
 
@@ -1146,7 +1145,7 @@ export default function App() {
             <div className="p-3 bg-white border-t border-slate-200 shrink-0 flex gap-2">
               <input
                 type="text"
-                placeholder="Discutez avec Otto…"
+                placeholder="Discutez avec Joste…"
                 value={ottoInput}
                 onChange={(e) => setOttoInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") handleSendToOtto(); }}
@@ -1163,11 +1162,11 @@ export default function App() {
         </div>
       )}
 
-      {/* Floating Active Chat Bubble on bottom-left, faithful to Houltu's UI */}
+      {/* Floating Active Chat Bubble on bottom-left */}
       <button
         onClick={() => setOttoOpen(true)}
         className="fixed bottom-6 left-6 sm:bottom-8 sm:left-8 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-all z-30 animate-pulse"
-        title="Discuter avec Otto !"
+        title="Discuter avec Joste !"
       >
         <MessageSquare size={20} className="text-white" />
       </button>

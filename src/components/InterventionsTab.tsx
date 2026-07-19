@@ -46,6 +46,27 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
   const [formProg, setFormProg] = useState(0);
   const [formNotes, setFormNotes] = useState("");
 
+  // New custom fields state
+  const [formVisibiliteClient, setFormVisibiliteClient] = useState(true);
+  const [formEmailAvisClient, setFormEmailAvisClient] = useState(false);
+  const [formEmailPlanifClient, setFormEmailPlanifClient] = useState(false);
+  const [formMotif, setFormMotif] = useState("");
+  const [formNomDemandeur, setFormNomDemandeur] = useState("");
+  const [formTelDemandeur, setFormTelDemandeur] = useState("");
+  const [formNumCommande, setFormNumCommande] = useState("");
+  const [formObservation, setFormObservation] = useState("");
+  const [formPhoto, setFormPhoto] = useState("");
+  const [formFac, setFormFac] = useState("Maintenance");
+  const [formSociete, setFormSociete] = useState("");
+  const [formPrestations, setFormPrestations] = useState("");
+  const [formInstallationEquipement, setFormInstallationEquipement] = useState("");
+  const [formAttente, setFormAttente] = useState(false);
+  const [formSource, setFormSource] = useState("");
+  const [formDebutIntervention, setFormDebutIntervention] = useState("");
+  const [formFinIntervention, setFormFinIntervention] = useState("");
+  const [formPlanningDetaille, setFormPlanningDetaille] = useState(false);
+  const [formIntervenants, setFormIntervenants] = useState("");
+
   // Msg states
   const [msgWho, setFormMsgWho] = useState(() => localStorage.getItem("gmao_msg_who") || "");
   const [msgTxt, setFormMsgTxt] = useState("");
@@ -183,18 +204,40 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
     setFormAssigne("");
     setFormProg(0);
     setFormNotes("");
+
+    // Initialize custom fields
+    setFormVisibiliteClient(true);
+    setFormEmailAvisClient(false);
+    setFormEmailPlanifClient(false);
+    setFormMotif("");
+    setFormNomDemandeur("");
+    setFormTelDemandeur("");
+    setFormNumCommande("");
+    setFormObservation("");
+    setFormPhoto("");
+    setFormFac("Maintenance");
+    setFormSociete("");
+    setFormPrestations("");
+    setFormInstallationEquipement("");
+    setFormAttente(false);
+    setFormSource("");
+    setFormDebutIntervention("");
+    setFormFinIntervention("");
+    setFormPlanningDetaille(false);
+    setFormIntervenants("");
+
     setShowAddModal(true);
   };
 
   const handleSaveAddTask = () => {
-    if (!formTitre) {
-      alert("L'intitulé de la prestation est requis.");
+    if (!formTitre && !formMotif) {
+      alert("L'intitulé ou le motif de l'intervention est requis.");
       return;
     }
     const cleanGe = (formGe.split(" — ")[0] || "").trim();
     onAddTask({
       id: "T" + Date.now(),
-      titre: formTitre,
+      titre: formTitre || formMotif || "Nouvelle intervention",
       type: formType,
       statut: formStatut,
       prio: formPrio,
@@ -202,14 +245,35 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
       ge: cleanGe,
       client: formClient,
       site: formSite,
-      echeance: formEcheance,
-      assigne: formAssigne,
+      echeance: formEcheance || formFinIntervention || todayYMD(),
+      assigne: formIntervenants || formAssigne || "Non assigné",
       etiquette: cleanGe || "ADMIN",
       prog: formProg,
-      notes: formNotes,
+      notes: formNotes || formObservation || "",
       dreal: formStatut === "Terminé" ? todayYMD() : null,
       msgs: [],
-      log: [{ t: new Date().toISOString(), a: "Intervention créée" }]
+      log: [{ t: new Date().toISOString(), a: "Intervention créée" }],
+
+      // Custom fields saved
+      visibiliteClient: formVisibiliteClient,
+      emailAvisClient: formEmailAvisClient,
+      emailPlanifClient: formEmailPlanifClient,
+      motif: formMotif,
+      nomDemandeur: formNomDemandeur,
+      telDemandeur: formTelDemandeur,
+      numCommande: formNumCommande,
+      observation: formObservation,
+      photo: formPhoto,
+      fac: formFac,
+      societe: formSociete,
+      prestations: formPrestations,
+      installationEquipement: formInstallationEquipement,
+      attente: formAttente,
+      source: formSource,
+      debutIntervention: formDebutIntervention,
+      finIntervention: formFinIntervention,
+      planningDetaille: formPlanningDetaille,
+      intervenants: formIntervenants || formAssigne
     });
     setShowAddModal(false);
   };
@@ -230,6 +294,28 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
     setFormAssigne(t.assigne || "");
     setFormProg(t.prog || 0);
     setFormNotes(t.notes || "");
+
+    // Populate custom fields (handling default values)
+    setFormVisibiliteClient(t.visibiliteClient !== undefined ? t.visibiliteClient : true);
+    setFormEmailAvisClient(!!t.emailAvisClient);
+    setFormEmailPlanifClient(!!t.emailPlanifClient);
+    setFormMotif(t.motif || t.titre || "");
+    setFormNomDemandeur(t.nomDemandeur || "");
+    setFormTelDemandeur(t.telDemandeur || "");
+    setFormNumCommande(t.numCommande || "");
+    setFormObservation(t.observation || t.notes || "");
+    setFormPhoto(t.photo || "");
+    setFormFac(t.fac || "Maintenance");
+    setFormSociete(t.societe || "");
+    setFormPrestations(t.prestations || "");
+    setFormInstallationEquipement(t.installationEquipement || "");
+    setFormAttente(!!t.attente);
+    setFormSource(t.source || "");
+    setFormDebutIntervention(t.debutIntervention || "");
+    setFormFinIntervention(t.finIntervention || "");
+    setFormPlanningDetaille(!!t.planningDetaille);
+    setFormIntervenants(t.intervenants || t.assigne || "");
+
     setShowEditModal(true);
   };
 
@@ -239,7 +325,7 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
     const cleanGe = (formGe.split(" — ")[0] || "").trim();
 
     const updated: Partial<Task> = {
-      titre: formTitre,
+      titre: formTitre || formMotif || t.titre,
       type: formType,
       statut: formStatut,
       prio: formPrio,
@@ -247,10 +333,31 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
       client: formClient,
       site: formSite,
       ddemande: formDdemande,
-      echeance: formEcheance,
-      assigne: formAssigne,
+      echeance: formEcheance || formFinIntervention || t.echeance,
+      assigne: formIntervenants || formAssigne || t.assigne,
       prog: formProg,
-      notes: formNotes
+      notes: formNotes || formObservation || t.notes,
+
+      // Custom fields saved
+      visibiliteClient: formVisibiliteClient,
+      emailAvisClient: formEmailAvisClient,
+      emailPlanifClient: formEmailPlanifClient,
+      motif: formMotif,
+      nomDemandeur: formNomDemandeur,
+      telDemandeur: formTelDemandeur,
+      numCommande: formNumCommande,
+      observation: formObservation,
+      photo: formPhoto,
+      fac: formFac,
+      societe: formSociete,
+      prestations: formPrestations,
+      installationEquipement: formInstallationEquipement,
+      attente: formAttente,
+      source: formSource,
+      debutIntervention: formDebutIntervention,
+      finIntervention: formFinIntervention,
+      planningDetaille: formPlanningDetaille,
+      intervenants: formIntervenants || formAssigne
     };
 
     if (formStatut === "Terminé") {
@@ -262,10 +369,10 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
 
     // Add log entry
     const changes: string[] = [];
-    if (t.titre !== formTitre) changes.push("intitulé");
+    if (t.titre !== (formTitre || formMotif)) changes.push("intitulé");
     if (t.statut !== formStatut) changes.push(`statut (${t.statut} ➜ ${formStatut})`);
     if (t.prog !== formProg) changes.push(`progression (${t.prog}% ➜ ${formProg}%)`);
-    if (t.assigne !== formAssigne) changes.push("technicien");
+    if ((t.assigne || "") !== (formIntervenants || formAssigne)) changes.push("technicien");
 
     const log = t.log ? [...t.log] : [];
     if (changes.length) {
@@ -402,7 +509,7 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
         </div>
       </div>
 
-      {/* Houltu Visual Timeline Segment */}
+      {/* Visual Timeline Segment */}
       <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-2xs space-y-4">
         <div className="flex justify-between items-center text-xs font-black text-slate-800 uppercase tracking-wider pl-1 font-sans">
           <span>📈 Suivi de Progression Opérationnelle (Timeline)</span>
@@ -708,99 +815,615 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
 
       {/* MODAL Add Task */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-100">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
-            <div className="bg-slate-700 text-white px-6 py-4 flex justify-between items-center">
-              <h3 className="font-bold text-md">➕ Nouvelle intervention</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-white hover:text-slate-200 text-2xl font-bold">&times;</button>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-100 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-slate-100 border-b border-slate-200 px-6 py-4 flex justify-between items-center shrink-0">
+              <h3 className="font-extrabold text-slate-800 text-base tracking-tight uppercase flex items-center gap-2">
+                <span className="text-blue-600">🛠️</span> AJOUTER UNE INTERVENTION
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-200 p-1.5 rounded-lg transition-colors text-2xl font-semibold leading-none cursor-pointer"
+              >
+                &times;
+              </button>
             </div>
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="flex flex-col space-y-1">
-                <label className="text-xs font-bold text-slate-600 uppercase">Intitulé / prestation *</label>
-                <input type="text" value={formTitre} onChange={(e) => setFormTitre(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" placeholder="Saisir l'action à réaliser…" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Statut</label>
-                  <select value={formStatut} onChange={(e) => setFormStatut(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white">
-                    <option>Non commencé</option>
-                    <option>En cours</option>
-                    <option>En attente</option>
-                    <option>Bloqué</option>
-                    <option>Terminé</option>
-                  </select>
+
+            {/* Top switches row */}
+            <div className="bg-slate-50 border-b border-slate-100 px-6 py-3 shrink-0 grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Visibilité client */}
+              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 shadow-3xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <span>Visibilité client</span>
+                  <span className="text-slate-400 cursor-help text-[10px]" title="Permet au client de voir cette intervention sur son portail">❓</span>
                 </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Priorité</label>
-                  <select value={formPrio} onChange={(e) => setFormPrio(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white">
-                    <option>P1</option>
-                    <option>P2</option>
-                    <option>P3</option>
-                    <option>P4</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex flex-col space-y-1">
-                <label className="text-xs font-bold text-slate-600 uppercase">Groupe Électrogène</label>
-                <select
-                  value={formGe}
-                  onChange={(e) => handleGEFill(e.target.value)}
-                  className="px-3 py-2 border rounded-lg text-sm bg-white"
+                <button
+                  type="button"
+                  onClick={() => setFormVisibiliteClient(!formVisibiliteClient)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formVisibiliteClient ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
                 >
-                  <option value="">— Aucun GE précis —</option>
-                  {db.parc.map(g => (
-                    <option key={g.id} value={g.id}>{g.id} — {g.client} / {g.site}</option>
-                  ))}
-                </select>
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      formVisibiliteClient ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Client</label>
-                  <input type="text" value={formClient} onChange={(e) => setFormClient(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
+
+              {/* Email avis client */}
+              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 shadow-3xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <span>Email avis client</span>
+                  <span className="text-slate-400 cursor-help text-[10px]" title="Envoyer automatiquement un e-mail d'avis à la fin">❓</span>
                 </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Site</label>
-                  <input type="text" value={formSite} onChange={(e) => setFormSite(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormEmailAvisClient(!formEmailAvisClient)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formEmailAvisClient ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      formEmailAvisClient ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Type prestation</label>
-                  <select value={formType} onChange={(e) => setFormType(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white">
-                    {TTYPES.map((x, i) => (
-                      <option key={i}>{x}</option>
-                    ))}
-                  </select>
+
+              {/* Email planification client */}
+              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 shadow-3xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <span>Email planification client</span>
+                  <span className="text-slate-400 cursor-help text-[10px]" title="Informer le client par mail dès la planification">❓</span>
                 </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Date demande</label>
-                  <input type="date" value={formDdemande} onChange={(e) => setFormDdemande(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Échéance</label>
-                  <input type="date" value={formEcheance} onChange={(e) => setFormEcheance(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Technicien / Intervenant</label>
-                  <input type="text" value={formAssigne} onChange={(e) => setFormAssigne(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" list="techlist" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Progression (%)</label>
-                  <input type="number" min="0" max="100" value={formProg} onChange={(e) => setFormProg(Number(e.target.value))} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Notes / Obs</label>
-                  <input type="text" value={formNotes} onChange={(e) => setFormNotes(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" placeholder="Précisions de terrain…" />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormEmailPlanifClient(!formEmailPlanifClient)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formEmailPlanifClient ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      formEmailPlanifClient ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
-            <div className="bg-slate-50 px-6 py-4 flex justify-end gap-2 border-t">
-              <button onClick={() => setShowAddModal(false)} className="px-4 py-2 border rounded-lg text-sm font-semibold bg-white hover:bg-slate-100 cursor-pointer">Annuler</button>
-              <button onClick={handleSaveAddTask} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold cursor-pointer">Enregistrer</button>
+
+            {/* Scrollable Form Body */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-slate-50/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                
+                {/* LEFT COLUMN */}
+                <div className="space-y-4">
+                  {/* Site client */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Site client <span className="text-red-500 font-bold">*</span>
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Sélectionnez le groupe ou saisissez le site d'intervention">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formGe}
+                        onChange={(e) => {
+                          const geVal = e.target.value;
+                          handleGEFill(geVal);
+                          if (geVal === "") {
+                            setFormTitre("");
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        <option value="">Choisir un site / client...</option>
+                        {db.parc.map(g => (
+                          <option key={g.id} value={g.id}>
+                            {g.site} — {g.client} (GE: {g.id})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const promptSite = prompt("Saisir un nouveau nom de site client :");
+                          if (promptSite) {
+                            setFormSite(promptSite);
+                            setFormClient("Nouveau Client");
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                        title="Ajouter un site temporaire"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Manual Site & Client detail inputs if no GE is linked */}
+                  {!formGe && (
+                    <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-100 rounded-lg border border-slate-200 animate-in fade-in duration-150">
+                      <div className="flex flex-col space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Société/Client</label>
+                        <input
+                          type="text"
+                          value={formClient}
+                          onChange={(e) => setFormClient(e.target.value)}
+                          placeholder="Nom client"
+                          className="px-2.5 py-1.5 border border-slate-300 rounded-md text-xs bg-white focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Site précis</label>
+                        <input
+                          type="text"
+                          value={formSite}
+                          onChange={(e) => setFormSite(e.target.value)}
+                          placeholder="Localisation"
+                          className="px-2.5 py-1.5 border border-slate-300 rounded-md text-xs bg-white focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Motif de l'intervention */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center gap-1">
+                      <span>Motif de l'intervention</span>
+                      <span className="text-amber-500 text-xs">⚠️</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={formMotif}
+                      onChange={(e) => {
+                        setFormMotif(e.target.value);
+                        if (!formTitre) setFormTitre(e.target.value.slice(0, 50));
+                      }}
+                      placeholder="Motif détaillé de l'intervention..."
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                    />
+                  </div>
+
+                  {/* Type de l'intervention */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Type de l'intervention
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Sélectionnez le type préventif/curatif">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formType}
+                        onChange={(e) => setFormType(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        {TTYPES.map((x, i) => (
+                          <option key={i}>{x}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const customType = prompt("Saisir un nouveau type d'intervention :");
+                          if (customType) {
+                            setFormType(customType);
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nom du demandeur & Tel du demandeur */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-xs font-extrabold text-slate-700 uppercase">Nom du demandeur</label>
+                      <input
+                        type="text"
+                        value={formNomDemandeur}
+                        onChange={(e) => setFormNomDemandeur(e.target.value)}
+                        placeholder="Nom du demandeur"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                      />
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-xs font-extrabold text-slate-700 uppercase">Tel du demandeur</label>
+                      <input
+                        type="text"
+                        value={formTelDemandeur}
+                        onChange={(e) => setFormTelDemandeur(e.target.value)}
+                        placeholder="Tel du demandeur"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  {/* N° de commande */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">N° de commande</label>
+                    <input
+                      type="text"
+                      value={formNumCommande}
+                      onChange={(e) => setFormNumCommande(e.target.value)}
+                      placeholder="N° de commande"
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                    />
+                  </div>
+
+                  {/* Observation */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Observation</label>
+                    <textarea
+                      rows={2}
+                      value={formObservation}
+                      onChange={(e) => setFormObservation(e.target.value)}
+                      placeholder="Observation terrain ou consignes spéciales..."
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                    />
+                  </div>
+
+                  {/* Priorité (Normal, Haute, Urgente) */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Priorité</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["Normal", "Haute", "Urgente"].map(p => {
+                        const isSel = (p === "Normal" && formPrio === "P3") || (p === "Haute" && formPrio === "P2") || (p === "Urgente" && formPrio === "P1");
+                        const colorClass = p === "Urgente" ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : p === "Haute" ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200';
+                        const selColorClass = p === "Urgente" ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200' : p === "Haute" ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-200' : 'bg-slate-800 text-white border-slate-800 shadow-sm shadow-slate-300';
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => {
+                              if (p === "Normal") setFormPrio("P3");
+                              else if (p === "Haute") setFormPrio("P2");
+                              else if (p === "Urgente") setFormPrio("P1");
+                            }}
+                            className={`py-2 px-3 text-xs font-bold border rounded-lg transition-all cursor-pointer ${isSel ? selColorClass : colorClass}`}
+                          >
+                            {p === "Urgente" ? "🚨 " : p === "Haute" ? "⚡ " : "👍 "}
+                            {p}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Photo / Fichier */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Photo / Fichier</label>
+                    <div className="flex items-center gap-2 border border-slate-300 rounded-lg p-2 bg-white">
+                      <label className="bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold py-1.5 px-3 rounded-lg cursor-pointer transition-colors shadow-2xs shrink-0">
+                        Choisir un fichier...
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setFormPhoto(file.name);
+                          }}
+                        />
+                      </label>
+                      <span className="text-xs text-slate-500 truncate flex-1 font-mono">
+                        {formPhoto || "Aucun fichier sélectionné"}
+                      </span>
+                      {formPhoto && (
+                        <button
+                          type="button"
+                          onClick={() => setFormPhoto("")}
+                          className="text-slate-400 hover:text-red-500 text-xs font-bold px-2 py-1 hover:bg-slate-100 rounded-md cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN */}
+                <div className="space-y-4">
+                  {/* Société */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Société
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Sélectionnez l'entité cliente">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formSociete}
+                        onChange={(e) => {
+                          setFormSociete(e.target.value);
+                          if (!formClient) setFormClient(e.target.value);
+                        }}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        <option value="">Sélectionner une société...</option>
+                        {Array.from(new Set(db.parc.map(p => p.client).filter(Boolean))).map((cl, i) => (
+                          <option key={i} value={cl || ""}>{cl}</option>
+                        ))}
+                        <option value="STHIC">STHIC</option>
+                        <option value="TOTAL CONGO">TOTAL CONGO</option>
+                        <option value="ENI CONGO">ENI CONGO</option>
+                        <option value="TECNOSTREAM">TECNOSTREAM</option>
+                        <option value="GMAO JOSTE">GMAO JOSTE</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const promptSoc = prompt("Saisir un nouveau nom de société :");
+                          if (promptSoc) {
+                            setFormSociete(promptSoc);
+                            if (!formClient) setFormClient(promptSoc);
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Prestation(s) */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Prestation(s)
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Définir la nature de la prestation">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formPrestations}
+                        onChange={(e) => {
+                          setFormPrestations(e.target.value);
+                          if (!formTitre) setFormTitre(e.target.value);
+                        }}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        <option value="">Sélectionner une prestation...</option>
+                        <option value="Maintenance Préventive standard">Maintenance Préventive standard</option>
+                        <option value="Vidange et Remplacement Filtres">Vidange et Remplacement Filtres</option>
+                        <option value="Diagnostic Panne Electrique">Diagnostic Panne Electrique</option>
+                        <option value="Dépannage Mécanique Moteur">Dépannage Mécanique Moteur</option>
+                        <option value="Remplacement de Batterie">Remplacement de Batterie</option>
+                        <option value="Contrôle Mensuel & Essai à Vide">Contrôle Mensuel & Essai à Vide</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const customPres = prompt("Saisir une nouvelle prestation :");
+                          if (customPres) {
+                            setFormPrestations(customPres);
+                            if (!formTitre) setFormTitre(customPres);
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Installation / matériel / équipement */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">
+                      installation/matériel/équipement
+                    </label>
+                    <select
+                      value={formInstallationEquipement}
+                      onChange={(e) => setFormInstallationEquipement(e.target.value)}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                    >
+                      <option value="">Sélectionner une prestation</option>
+                      <option value="Groupe Electrogène Principal">Groupe Electrogène Principal</option>
+                      <option value="Armoire Inverseur Automatique">Armoire Inverseur Automatique</option>
+                      <option value="Cuve à Carburant & Tuyauteries">Cuve à Carburant & Tuyauteries</option>
+                      <option value="Batteries de Démarrage">Batteries de Démarrage</option>
+                      <option value="Disjoncteur Général / Protection">Disjoncteur Général / Protection</option>
+                    </select>
+                  </div>
+
+                  {/* Intervention en attente */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Intervention en attente</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormAttente(true);
+                          setFormStatut("En attente");
+                        }}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                          formAttente ? 'bg-amber-500 text-white border-amber-500 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        OUI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormAttente(false);
+                          if (formStatut === "En attente") setFormStatut("Non commencé");
+                        }}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                          !formAttente ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        NON
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Source */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Source
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Canal d'émission de l'intervention">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formSource}
+                        onChange={(e) => setFormSource(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        <option value="">Sélectionner une source...</option>
+                        <option value="Téléphone">Téléphone</option>
+                        <option value="Email">Email</option>
+                        <option value="Portail Client">Portail Client</option>
+                        <option value="Contrôle de Routine">Contrôle de Routine</option>
+                        <option value="Joste Assistant AI">Joste Assistant AI</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const customSrc = prompt("Saisir un nouveau canal source :");
+                          if (customSrc) {
+                            setFormSource(customSrc);
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Début de l'intervention */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Début de l'intervention
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Date et heure prévues de début">❓</span>
+                      </span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={formDebutIntervention}
+                      onChange={(e) => {
+                        setFormDebutIntervention(e.target.value);
+                        if (!formDdemande) setFormDdemande(e.target.value.split("T")[0] || todayYMD());
+                      }}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-mono text-slate-800"
+                    />
+                  </div>
+
+                  {/* Fin de l'intervention */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Fin de l'intervention</label>
+                    <input
+                      type="datetime-local"
+                      value={formFinIntervention}
+                      onChange={(e) => {
+                        setFormFinIntervention(e.target.value);
+                        if (!formEcheance) setFormEcheance(e.target.value.split("T")[0] || "");
+                      }}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-mono text-slate-800"
+                    />
+                  </div>
+
+                  {/* Planning détaillé */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Planning détaillé</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormPlanningDetaille(true)}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                          formPlanningDetaille ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        OUI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormPlanningDetaille(false)}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                          !formPlanningDetaille ? 'bg-slate-700 text-white border-slate-700 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        NON
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Intervenant(s) */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Intervenant(s)</label>
+                    <input
+                      type="text"
+                      value={formIntervenants}
+                      onChange={(e) => {
+                        setFormIntervenants(e.target.value);
+                        setFormAssigne(e.target.value);
+                      }}
+                      placeholder="Nom de l'intervenant / technicien (ex: Jean, Koffi, Joste)"
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                      list="techlist"
+                    />
+                  </div>
+
+                  {/* Fac / Facturation */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Facturation (Fac)</label>
+                    <select
+                      value={formFac}
+                      onChange={(e) => setFormFac(e.target.value)}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                    >
+                      <option value="A facturer">A facturer</option>
+                      <option value="Sous Garantie">Sous Garantie</option>
+                      <option value="Maintenance">Maintenance</option>
+                      <option value="Non facturable">Non facturable</option>
+                      <option value="Facturée">Facturée</option>
+                    </select>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Title input (Hidden or preset with action description) */}
+              <div className="pt-4 border-t border-slate-200/60 flex flex-col space-y-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase">Désignation synthétique pour planning / calendrier</label>
+                <input
+                  type="text"
+                  value={formTitre}
+                  onChange={(e) => setFormTitre(e.target.value)}
+                  placeholder="Intitulé concis de l'action GMAO..."
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-slate-800 font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="bg-slate-100 px-6 py-4 flex justify-end gap-2 border-t shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 cursor-pointer active:scale-95 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAddTask}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold cursor-pointer active:scale-95 transition-all shadow-md shadow-blue-200"
+              >
+                Enregistrer l'Intervention
+              </button>
             </div>
           </div>
         </div>
@@ -808,95 +1431,640 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
 
       {/* MODAL Edit Task */}
       {showEditModal && activeEditIdx !== null && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-100">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
-            <div className="bg-slate-700 text-white px-6 py-4 flex justify-between items-center">
-              <h3 className="font-bold text-md">✏️ Modifier l'intervention</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-white hover:text-slate-200 text-2xl font-bold">&times;</button>
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-100 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="bg-slate-100 border-b border-slate-200 px-6 py-4 flex justify-between items-center shrink-0">
+              <h3 className="font-extrabold text-slate-800 text-base tracking-tight uppercase flex items-center gap-2">
+                <span className="text-amber-500">✏️</span> MODIFIER L'INTERVENTION
+              </h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-200 p-1.5 rounded-lg transition-colors text-2xl font-semibold leading-none cursor-pointer"
+              >
+                &times;
+              </button>
             </div>
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              <div className="flex flex-col space-y-1">
-                <label className="text-xs font-bold text-slate-600 uppercase">Intitulé / prestation</label>
-                <input type="text" value={formTitre} onChange={(e) => setNewPlanTitre(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" id="m_titre" />
+
+            {/* Top switches row */}
+            <div className="bg-slate-50 border-b border-slate-100 px-6 py-3 shrink-0 grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Visibilité client */}
+              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 shadow-3xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <span>Visibilité client</span>
+                  <span className="text-slate-400 cursor-help text-[10px]" title="Permet au client de voir cette intervention sur son portail">❓</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormVisibiliteClient(!formVisibiliteClient)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formVisibiliteClient ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      formVisibiliteClient ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Statut</label>
-                  <select value={formStatut} onChange={(e) => setFormStatut(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white">
-                    <option>Non commencé</option>
-                    <option>En cours</option>
-                    <option>En attente</option>
-                    <option>Bloqué</option>
-                    <option>Terminé</option>
-                  </select>
+
+              {/* Email avis client */}
+              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 shadow-3xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <span>Email avis client</span>
+                  <span className="text-slate-400 cursor-help text-[10px]" title="Envoyer automatiquement un e-mail d'avis à la fin">❓</span>
                 </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Priorité</label>
-                  <select value={formPrio} onChange={(e) => setFormPrio(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white">
-                    <option>P1</option>
-                    <option>P2</option>
-                    <option>P3</option>
-                    <option>P4</option>
-                  </select>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormEmailAvisClient(!formEmailAvisClient)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formEmailAvisClient ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      formEmailAvisClient ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
-              <div className="flex flex-col space-y-1">
-                <label className="text-xs font-bold text-slate-600 uppercase">GE concerné</label>
-                <select value={formGe} onChange={(e) => handleGEFill(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white">
-                  <option value="">— Aucun GE précis —</option>
-                  {db.parc.map(g => (
-                    <option key={g.id} value={g.id}>{g.id} — {g.client} / {g.site}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Client</label>
-                  <input type="text" value={formClient} onChange={(e) => setFormClient(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
+
+              {/* Email planification client */}
+              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 shadow-3xs">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <span>Email planification client</span>
+                  <span className="text-slate-400 cursor-help text-[10px]" title="Informer le client par mail dès la planification">❓</span>
                 </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Site</label>
-                  <input type="text" value={formSite} onChange={(e) => setFormSite(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Type prestation</label>
-                  <select value={formType} onChange={(e) => setFormType(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white">
-                    {TTYPES.map((x, i) => (
-                      <option key={i}>{x}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Date demande</label>
-                  <input type="date" value={formDdemande} onChange={(e) => setFormDdemande(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Échéance</label>
-                  <input type="date" value={formEcheance} onChange={(e) => setFormEcheance(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Intervenant</label>
-                  <input type="text" value={formAssigne} onChange={(e) => setFormAssigne(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" list="techlist" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Progression (%)</label>
-                  <input type="number" min="0" max="100" value={formProg} onChange={(e) => setFormProg(Number(e.target.value))} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
-                <div className="flex flex-col space-y-1">
-                  <label className="text-xs font-bold text-slate-600 uppercase">Notes / Obs</label>
-                  <input type="text" value={formNotes} onChange={(e) => setFormNotes(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormEmailPlanifClient(!formEmailPlanifClient)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formEmailPlanifClient ? 'bg-emerald-500' : 'bg-red-500'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                      formEmailPlanifClient ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
-            <div className="bg-slate-50 px-6 py-4 flex justify-end gap-2 border-t">
-              <button onClick={() => setShowEditModal(false)} className="px-4 py-2 border rounded-lg text-sm font-semibold bg-white hover:bg-slate-100 cursor-pointer">Annuler</button>
-              <button onClick={handleSaveEditTask} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold cursor-pointer">Enregistrer</button>
+
+            {/* Scrollable Form Body */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-6 bg-slate-50/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                
+                {/* LEFT COLUMN */}
+                <div className="space-y-4">
+                  {/* Site client */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Site client <span className="text-red-500 font-bold">*</span>
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Sélectionnez le groupe ou saisissez le site d'intervention">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formGe}
+                        onChange={(e) => {
+                          const geVal = e.target.value;
+                          handleGEFill(geVal);
+                        }}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        <option value="">Choisir un site / client...</option>
+                        {db.parc.map(g => (
+                          <option key={g.id} value={g.id}>
+                            {g.site} — {g.client} (GE: {g.id})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const promptSite = prompt("Saisir un nouveau nom de site client :");
+                          if (promptSite) {
+                            setFormSite(promptSite);
+                            setFormClient("Client Modifié");
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                        title="Modifier le nom du site"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Manual Site & Client detail inputs if no GE is linked */}
+                  {!formGe && (
+                    <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-100 rounded-lg border border-slate-200 animate-in fade-in duration-150">
+                      <div className="flex flex-col space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Société/Client</label>
+                        <input
+                          type="text"
+                          value={formClient}
+                          onChange={(e) => setFormClient(e.target.value)}
+                          placeholder="Nom client"
+                          className="px-2.5 py-1.5 border border-slate-300 rounded-md text-xs bg-white focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                      <div className="flex flex-col space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase">Site précis</label>
+                        <input
+                          type="text"
+                          value={formSite}
+                          onChange={(e) => setFormSite(e.target.value)}
+                          placeholder="Localisation"
+                          className="px-2.5 py-1.5 border border-slate-300 rounded-md text-xs bg-white focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Motif de l'intervention */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center gap-1">
+                      <span>Motif de l'intervention</span>
+                      <span className="text-amber-500 text-xs">⚠️</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={formMotif}
+                      onChange={(e) => setFormMotif(e.target.value)}
+                      placeholder="Motif détaillé de l'intervention..."
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                    />
+                  </div>
+
+                  {/* Type de l'intervention */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Type de l'intervention
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Sélectionnez le type préventif/curatif">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formType}
+                        onChange={(e) => setFormType(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        {TTYPES.map((x, i) => (
+                          <option key={i}>{x}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const customType = prompt("Saisir un nouveau type d'intervention :");
+                          if (customType) {
+                            setFormType(customType);
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nom du demandeur & Tel du demandeur */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-xs font-extrabold text-slate-700 uppercase">Nom du demandeur</label>
+                      <input
+                        type="text"
+                        value={formNomDemandeur}
+                        onChange={(e) => setFormNomDemandeur(e.target.value)}
+                        placeholder="Nom du demandeur"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                      />
+                    </div>
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-xs font-extrabold text-slate-700 uppercase">Tel du demandeur</label>
+                      <input
+                        type="text"
+                        value={formTelDemandeur}
+                        onChange={(e) => setFormTelDemandeur(e.target.value)}
+                        placeholder="Tel du demandeur"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  {/* N° de commande */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">N° de commande</label>
+                    <input
+                      type="text"
+                      value={formNumCommande}
+                      onChange={(e) => setFormNumCommande(e.target.value)}
+                      placeholder="N° de commande"
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                    />
+                  </div>
+
+                  {/* Observation */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Observation</label>
+                    <textarea
+                      rows={2}
+                      value={formObservation}
+                      onChange={(e) => setFormObservation(e.target.value)}
+                      placeholder="Observation terrain ou consignes spéciales..."
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                    />
+                  </div>
+
+                  {/* Priorité (Normal, Haute, Urgente) */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Priorité</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["Normal", "Haute", "Urgente"].map(p => {
+                        const isSel = (p === "Normal" && formPrio === "P3") || (p === "Haute" && formPrio === "P2") || (p === "Urgente" && formPrio === "P1");
+                        const colorClass = p === "Urgente" ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : p === "Haute" ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200';
+                        const selColorClass = p === "Urgente" ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200' : p === "Haute" ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-200' : 'bg-slate-800 text-white border-slate-800 shadow-sm shadow-slate-300';
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => {
+                              if (p === "Normal") setFormPrio("P3");
+                              else if (p === "Haute") setFormPrio("P2");
+                              else if (p === "Urgente") setFormPrio("P1");
+                            }}
+                            className={`py-2 px-3 text-xs font-bold border rounded-lg transition-all cursor-pointer ${isSel ? selColorClass : colorClass}`}
+                          >
+                            {p === "Urgente" ? "🚨 " : p === "Haute" ? "⚡ " : "👍 "}
+                            {p}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Photo / Fichier */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Photo / Fichier</label>
+                    <div className="flex items-center gap-2 border border-slate-300 rounded-lg p-2 bg-white">
+                      <label className="bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold py-1.5 px-3 rounded-lg cursor-pointer transition-colors shadow-2xs shrink-0">
+                        Choisir un fichier...
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) setFormPhoto(file.name);
+                          }}
+                        />
+                      </label>
+                      <span className="text-xs text-slate-500 truncate flex-1 font-mono">
+                        {formPhoto || "Aucun fichier sélectionné"}
+                      </span>
+                      {formPhoto && (
+                        <button
+                          type="button"
+                          onClick={() => setFormPhoto("")}
+                          className="text-slate-400 hover:text-red-500 text-xs font-bold px-2 py-1 hover:bg-slate-100 rounded-md cursor-pointer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN */}
+                <div className="space-y-4">
+                  {/* Société */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Société
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Sélectionnez l'entité cliente">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formSociete}
+                        onChange={(e) => {
+                          setFormSociete(e.target.value);
+                          if (!formClient) setFormClient(e.target.value);
+                        }}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        <option value="">Sélectionner une société...</option>
+                        {Array.from(new Set(db.parc.map(p => p.client).filter(Boolean))).map((cl, i) => (
+                          <option key={i} value={cl || ""}>{cl}</option>
+                        ))}
+                        <option value="STHIC">STHIC</option>
+                        <option value="TOTAL CONGO">TOTAL CONGO</option>
+                        <option value="ENI CONGO">ENI CONGO</option>
+                        <option value="TECNOSTREAM">TECNOSTREAM</option>
+                        <option value="GMAO JOSTE">GMAO JOSTE</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const promptSoc = prompt("Saisir un nouveau nom de société :");
+                          if (promptSoc) {
+                            setFormSociete(promptSoc);
+                            if (!formClient) setFormClient(promptSoc);
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Prestation(s) */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Prestation(s)
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Définir la nature de la prestation">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formPrestations}
+                        onChange={(e) => {
+                          setFormPrestations(e.target.value);
+                          if (!formTitre) setFormTitre(e.target.value);
+                        }}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        <option value="">Sélectionner une prestation...</option>
+                        <option value="Maintenance Préventive standard">Maintenance Préventive standard</option>
+                        <option value="Vidange et Remplacement Filtres">Vidange et Remplacement Filtres</option>
+                        <option value="Diagnostic Panne Electrique">Diagnostic Panne Electrique</option>
+                        <option value="Dépannage Mécanique Moteur">Dépannage Mécanique Moteur</option>
+                        <option value="Remplacement de Batterie">Remplacement de Batterie</option>
+                        <option value="Contrôle Mensuel & Essai à Vide">Contrôle Mensuel & Essai à Vide</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const customPres = prompt("Saisir une nouvelle prestation :");
+                          if (customPres) {
+                            setFormPrestations(customPres);
+                            if (!formTitre) setFormTitre(customPres);
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Installation / matériel / équipement */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">
+                      installation/matériel/équipement
+                    </label>
+                    <select
+                      value={formInstallationEquipement}
+                      onChange={(e) => setFormInstallationEquipement(e.target.value)}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                    >
+                      <option value="">Sélectionner une prestation</option>
+                      <option value="Groupe Electrogène Principal">Groupe Electrogène Principal</option>
+                      <option value="Armoire Inverseur Automatique">Armoire Inverseur Automatique</option>
+                      <option value="Cuve à Carburant & Tuyauteries">Cuve à Carburant & Tuyauteries</option>
+                      <option value="Batteries de Démarrage">Batteries de Démarrage</option>
+                      <option value="Disjoncteur Général / Protection">Disjoncteur Général / Protection</option>
+                    </select>
+                  </div>
+
+                  {/* Intervention en attente */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Intervention en attente</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormAttente(true);
+                          setFormStatut("En attente");
+                        }}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                          formAttente ? 'bg-amber-500 text-white border-amber-500 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        OUI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormAttente(false);
+                          if (formStatut === "En attente") setFormStatut("Non commencé");
+                        }}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                          !formAttente ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        NON
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Source */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Source
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Canal d'émission de l'intervention">❓</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <select
+                        value={formSource}
+                        onChange={(e) => setFormSource(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                      >
+                        <option value="">Sélectionner une source...</option>
+                        <option value="Téléphone">Téléphone</option>
+                        <option value="Email">Email</option>
+                        <option value="Portail Client">Portail Client</option>
+                        <option value="Contrôle de Routine">Contrôle de Routine</option>
+                        <option value="Joste Assistant AI">Joste Assistant AI</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const customSrc = prompt("Saisir un nouveau canal source :");
+                          if (customSrc) {
+                            setFormSource(customSrc);
+                          }
+                        }}
+                        className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 flex items-center justify-center font-bold text-lg cursor-pointer transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Début de l'intervention */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        Début de l'intervention
+                        <span className="text-slate-400 cursor-help text-[10px]" title="Date et heure prévues de début">❓</span>
+                      </span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={formDebutIntervention}
+                      onChange={(e) => {
+                        setFormDebutIntervention(e.target.value);
+                      }}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-mono text-slate-800"
+                    />
+                  </div>
+
+                  {/* Fin de l'intervention */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Fin de l'intervention</label>
+                    <input
+                      type="datetime-local"
+                      value={formFinIntervention}
+                      onChange={(e) => {
+                        setFormFinIntervention(e.target.value);
+                      }}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-mono text-slate-800"
+                    />
+                  </div>
+
+                  {/* Planning détaillé */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Planning détaillé</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFormPlanningDetaille(true)}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                          formPlanningDetaille ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        OUI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormPlanningDetaille(false)}
+                        className={`flex-1 py-2 px-3 rounded-lg text-xs font-extrabold border transition-all cursor-pointer ${
+                          !formPlanningDetaille ? 'bg-slate-700 text-white border-slate-700 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        NON
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Intervenant(s) */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Intervenant(s)</label>
+                    <input
+                      type="text"
+                      value={formIntervenants}
+                      onChange={(e) => {
+                        setFormIntervenants(e.target.value);
+                        setFormAssigne(e.target.value);
+                      }}
+                      placeholder="Nom de l'intervenant / technicien (ex: Jean, Koffi, Joste)"
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-slate-800"
+                      list="techlist"
+                    />
+                  </div>
+
+                  {/* Fac / Facturation */}
+                  <div className="flex flex-col space-y-1">
+                    <label className="text-xs font-extrabold text-slate-700 uppercase">Facturation (Fac)</label>
+                    <select
+                      value={formFac}
+                      onChange={(e) => setFormFac(e.target.value)}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-semibold text-slate-800"
+                    >
+                      <option value="A facturer">A facturer</option>
+                      <option value="Sous Garantie">Sous Garantie</option>
+                      <option value="Maintenance">Maintenance</option>
+                      <option value="Non facturable">Non facturable</option>
+                      <option value="Facturée">Facturée</option>
+                    </select>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Title input */}
+              <div className="pt-4 border-t border-slate-200/60 flex flex-col space-y-1">
+                <label className="text-[11px] font-bold text-slate-500 uppercase">Désignation synthétique pour planning / calendrier</label>
+                <input
+                  type="text"
+                  value={formTitre}
+                  onChange={(e) => setFormTitre(e.target.value)}
+                  placeholder="Intitulé concis de l'action GMAO..."
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-slate-800 font-medium"
+                />
+              </div>
+
+              {/* Statut & Progression fields for editing */}
+              <div className="pt-4 border-t border-slate-200/60 grid grid-cols-2 gap-4">
+                <div className="flex flex-col space-y-1">
+                  <label className="text-xs font-extrabold text-slate-700 uppercase">Statut d'intervention</label>
+                  <select
+                    value={formStatut}
+                    onChange={(e) => {
+                      setFormStatut(e.target.value);
+                      if (e.target.value === "Terminé") setFormProg(100);
+                      else if (e.target.value === "Non commencé") setFormProg(0);
+                    }}
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-slate-800 font-semibold"
+                  >
+                    <option value="Non commencé">Non commencé</option>
+                    <option value="En cours">En cours</option>
+                    <option value="En attente">En attente</option>
+                    <option value="Bloqué">Bloqué</option>
+                    <option value="Terminé">Terminé</option>
+                  </select>
+                </div>
+                <div className="flex flex-col space-y-1">
+                  <label className="text-xs font-extrabold text-slate-700 uppercase">Progression (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formProg}
+                    onChange={(e) => setFormProg(Number(e.target.value))}
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-slate-800 font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="bg-slate-100 px-6 py-4 flex justify-end gap-2 border-t shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 cursor-pointer active:scale-95 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEditTask}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-extrabold cursor-pointer active:scale-95 transition-all shadow-md shadow-blue-200"
+              >
+                Enregistrer les Modifications
+              </button>
             </div>
           </div>
         </div>
