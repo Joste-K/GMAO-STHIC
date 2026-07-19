@@ -1,16 +1,23 @@
 import React, { useState } from "react";
 import { AppDatabase, GE } from "../types";
 import { calcGE, recoGE, fmtD, diffDays, today, pd } from "../utils/calculations";
+import { HealthDashboard } from "./HealthDashboard";
 
 interface Props {
   db: AppDatabase;
   onSelectGE: (geId: string) => void;
   onOpenNewGE: () => void;
   onUpdateKva: (id: string, value: number | "") => void;
+  searchQuery?: string;
 }
 
-export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdateKva }) => {
-  const [search, setSearch] = useState("");
+export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdateKva, searchQuery = "" }) => {
+  const [search, setSearch] = useState(searchQuery);
+
+  React.useEffect(() => {
+    if (searchQuery) setSearch(searchQuery);
+  }, [searchQuery]);
+
   const [filtClient, setFiltClient] = useState("");
   const [filtMarque, setFiltMarque] = useState("");
   const [filtEtat, setFiltEtat] = useState("");
@@ -68,6 +75,9 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
 
   return (
     <div id="parc" className="space-y-4">
+      {/* Dashboard Santé */}
+      <HealthDashboard parc={db.parc} interventions={db.inter || []} />
+
       {/* Search & New button */}
       <div className="flex flex-wrap gap-4 items-center">
         <input

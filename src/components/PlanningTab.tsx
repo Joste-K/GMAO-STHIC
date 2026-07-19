@@ -15,6 +15,7 @@ interface Props {
   onDeleteAnomalie: (idx: number) => void;
   onReplacePlan: (items: PlanningItem[]) => void;
   onAppendPlan: (items: PlanningItem[]) => void;
+  onStartIntervention?: (item: PlanningItem, idx: number) => void;
 }
 
 export const PlanningTab: React.FC<Props> = ({
@@ -28,7 +29,8 @@ export const PlanningTab: React.FC<Props> = ({
   onUpdateAnomalieStatut,
   onDeleteAnomalie,
   onReplacePlan,
-  onAppendPlan
+  onAppendPlan,
+  onStartIntervention
 }) => {
   const [search, setSearch] = useState("");
   const [filtTech, setFiltTech] = useState("");
@@ -480,9 +482,20 @@ export const PlanningTab: React.FC<Props> = ({
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${dispColorClass}`}>
-                          {dispStatut}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${dispColorClass}`}>
+                            {dispStatut}
+                          </span>
+                          {!p.exec && onStartIntervention && (
+                            <button
+                              onClick={() => onStartIntervention(p, idx)}
+                              className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors"
+                              title="Démarrer l'intervention réelle"
+                            >
+                              🚀
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <input

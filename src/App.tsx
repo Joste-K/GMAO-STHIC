@@ -24,7 +24,9 @@ import { BilanTab } from "./components/BilanTab";
 import { GuideTab } from "./components/GuideTab";
 import { DonneesTab } from "./components/DonneesTab";
 import { LoginView } from "./components/LoginView";
+import { GEModal } from "./components/GEModal";
 import { AuthManager, UserProfile } from "./utils/firebase";
+import { calcGE, todayYMD } from "./utils/calculations";
 
 // Lucide icons
 import {
@@ -50,7 +52,9 @@ import {
   Send,
   MessageSquare,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Search,
+  ChevronRight
 } from "lucide-react";
 
 // Local storage key
@@ -251,6 +255,15 @@ export default function App() {
         const parsed = JSON.parse(raw);
         // Ensure sub-arrays exist to prevent crashes
         if (parsed.parc && parsed.inter && parsed.plan && parsed.taches) {
+          // MIGRATION: If local park is much smaller than seed park, merge missing ones
+          if (parsed.parc.length < SEED_PARC.length) {
+            console.log("Synchronisation du parc: ajout des sites manquants...");
+            const existingIds = new Set(parsed.parc.map((g: GE) => g.id));
+            const missing = SEED_PARC.filter(g => !existingIds.has(g.id));
+            parsed.parc = [...parsed.parc, ...missing];
+            // Also update storage immediately
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          }
           return parsed;
         }
       } catch (err) {
@@ -262,6 +275,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [activeGEId, setActiveGEId] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
@@ -285,6 +299,15 @@ export default function App() {
     onConfirm: () => void;
     isDanger?: boolean;
   } | null>(null);
+
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  const filteredGEs = globalSearch.trim() 
+    ? db.parc.filter(g => 
+        (g.id + " " + g.client + " " + g.site).toLowerCase().includes(globalSearch.toLowerCase())
+      ).slice(0, 8)
+    : [];
 
   const askConfirmation = (title: string, message: string, onConfirm: () => void, isDanger = false) => {
     setConfirmModal({
@@ -449,16 +472,16 @@ export default function App() {
   };
 
   // 3. Planning handlers
+  const handleAddPlan = (item: PlanningItem) => {
+    setDb(prev => ({ ...prev, plan: [item, ...prev.plan] }));
+  };
+
   const handleUpdatePlan = (idx: number, updated: Partial<PlanningItem>) => {
     setDb(prev => {
       const copy = [...prev.plan];
       copy[idx] = { ...copy[idx], ...updated };
       return { ...prev, plan: copy };
     });
-  };
-
-  const handleAddPlan = (item: PlanningItem) => {
-    setDb(prev => ({ ...prev, plan: [item, ...prev.plan] }));
   };
 
   const handleDeletePlan = (idx: number) => {
@@ -470,6 +493,136 @@ export default function App() {
       },
       true
     );
+  };
+
+  const handleProjeterVidanges = (month: string) => {
+    const newItems: PlanningItem[] = [];
+    db.parc.forEach(g => {
+      const { proch } = calcGE(g, db.inter || []);
+      if (proch) {
+        const prochStr = proch.toISOString().slice(0, 7);
+        if (prochStr === month) {
+          // Check if already planned
+          const already = db.plan.some(p => p.ge === g.id && p.date && p.date.startsWith(month));
+          if (!already) {
+            newItems.push({
+              date: proch.toISOString().slice(0, 10),
+              client: g.client,
+              site: g.site,
+              ge: g.id,
+              tech: "",
+              note: "Projection vidange auto",
+              exec: null
+            });
+          }
+        }
+      }
+    });
+    if (newItems.length > 0) {
+      setDb(prev => ({ ...prev, plan: [...newItems, ...prev.plan] }));
+    }
+  };
+
+  const handleEclaterMultiGE = () => {
+    setDb(prev => {
+      const newPlan: PlanningItem[] = [];
+      prev.plan.forEach(p => {
+        if (!p.ge && p.site && p.site.toUpperCase().includes("GE")) {
+          // It's a multi-GE site task, find all GEs for this site
+          const ges = prev.parc.filter(g => g.site === p.site && g.client === p.client);
+          if (ges.length > 1) {
+            ges.forEach(g => {
+              newPlan.push({ ...p, ge: g.id, note: p.note + " (Éclaté)" });
+            });
+            return;
+          }
+        }
+        newPlan.push(p);
+      });
+      return { ...prev, plan: newPlan };
+    });
+  };
+
+  const handleGenererMaintenances = (client: string, site: string, freq: string, day: string, month: string) => {
+    const ges = db.parc.filter(g => g.client === client && (!site || g.site === site));
+    const newItems: PlanningItem[] = [];
+    
+    // Simple logic to find the first occurrence of 'day' in 'month'
+    const baseDate = new Date(month + "-01");
+    const dayMap: { [key: string]: number } = { "dimanche": 0, "lundi": 1, "mardi": 2, "mercredi": 3, "jeudi": 4, "vendredi": 5, "samedi": 6 };
+    const targetDay = dayMap[day.toLowerCase()] ?? 5;
+    
+    while (baseDate.getDay() !== targetDay) {
+      baseDate.setDate(baseDate.getDate() + 1);
+    }
+    
+    ges.forEach(g => {
+      newItems.push({
+        date: baseDate.toISOString().slice(0, 10),
+        client: g.client,
+        site: g.site,
+        ge: g.id,
+        tech: "",
+        note: freq === "H" ? "Maintenance Hebdomadaire" : "Maintenance Mensuelle",
+        exec: null
+      });
+    });
+
+    if (newItems.length > 0) {
+      setDb(prev => ({ ...prev, plan: [...newItems, ...prev.plan] }));
+    }
+  };
+
+  const handleAddAnomalie = (ano: Anomalie) => {
+    setDb(prev => ({ ...prev, anomalies: [ano, ...prev.anomalies] }));
+  };
+
+  const handleUpdateAnomalieStatut = (idx: number, statut: string) => {
+    setDb(prev => {
+      const copy = [...prev.anomalies];
+      copy[idx] = { ...copy[idx], statut: statut as any };
+      return { ...prev, anomalies: copy };
+    });
+  };
+
+  const handleDeleteAnomalie = (idx: number) => {
+    askConfirmation("Supprimer l'anomalie", "Confirmer la suppression ?", () => {
+      setDb(prev => ({ ...prev, anomalies: prev.anomalies.filter((_, i) => i !== idx) }));
+    });
+  };
+
+  const handleReplacePlan = (items: PlanningItem[]) => {
+    setDb(prev => ({ ...prev, plan: items }));
+  };
+
+  const handleAppendPlan = (items: PlanningItem[]) => {
+    setDb(prev => ({ ...prev, plan: [...prev.plan, ...items] }));
+  };
+
+  const handleStartInterventionFromPlan = (item: PlanningItem, idx: number) => {
+    const newInter: Intervention = {
+      num: `INT-PL-${Math.floor(1000 + Math.random() * 9000)}`,
+      client: item.client || "",
+      site: item.site || "",
+      ge: item.ge || "",
+      type: "Préventive",
+      tech: item.tech || "",
+      descp: `Maintenance préventive planifiée le ${item.date}`,
+      descr: "",
+      reso: "",
+      obs: item.note || "",
+      dplan: item.date || todayYMD(),
+      ddeb: todayYMD(),
+      dfin: null,
+      urg: "Moyen"
+    };
+
+    setDb(prev => ({
+      ...prev,
+      inter: [newInter, ...prev.inter],
+    }));
+    
+    setActiveTab("interventions");
   };
 
   // 4. Tasks handlers
@@ -841,17 +994,109 @@ export default function App() {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         {/* Header toolbar */}
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10">
-          <div className="flex items-center gap-4 text-xs font-medium">
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-50">
+          <div className="flex items-center gap-4 text-xs font-medium flex-1">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
             >
               <Menu size={16} />
             </button>
-            <h1 className="text-sm font-bold text-slate-900 capitalize truncate">
+            <h1 className="text-sm font-bold text-slate-900 capitalize truncate hidden lg:block min-w-[120px]">
               {menuItems.find(m => m.id === activeTab)?.label}
             </h1>
+
+            {/* Global Search Bar */}
+            <div className="relative flex-1 max-w-md ml-2 group">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={14} />
+                <input
+                  type="text"
+                  placeholder="Recherche rapide GE, Site ou Client..."
+                  value={globalSearch}
+                  onChange={(e) => {
+                    setGlobalSearch(e.target.value);
+                    setShowSearchResults(true);
+                  }}
+                  onFocus={() => setShowSearchResults(true)}
+                  className="w-full bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2 pl-9 pr-4 text-xs font-semibold transition-all outline-none"
+                />
+                {globalSearch && (
+                  <button 
+                    onClick={() => { setGlobalSearch(""); setShowSearchResults(false); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Search Results Dropdown */}
+              {showSearchResults && globalSearch.trim() && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-[-1]" 
+                    onClick={() => setShowSearchResults(false)}
+                  />
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div className="p-2 max-h-[400px] overflow-y-auto">
+                      <div className="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">
+                        Résultats du parc ({filteredGEs.length})
+                      </div>
+                      {filteredGEs.length > 0 ? (
+                        filteredGEs.map((ge) => (
+                          <button
+                            key={ge.id}
+                            onClick={() => {
+                              setGlobalSearch("");
+                              setShowSearchResults(false);
+                              setActiveTab("parc");
+                              setActiveGEId(ge.id);
+                            }}
+                            className="w-full flex items-center justify-between p-3 hover:bg-blue-50 rounded-xl transition-all group/item text-left cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-[10px] group-hover/item:bg-blue-600 group-hover/item:text-white transition-colors">
+                                {ge.id}
+                              </div>
+                              <div>
+                                <div className="text-xs font-extrabold text-slate-800 group-hover/item:text-blue-700 transition-colors uppercase">
+                                  {ge.client}
+                                </div>
+                                <div className="text-[10px] text-slate-400 font-medium truncate max-w-[200px]">
+                                  {ge.site}
+                                </div>
+                              </div>
+                            </div>
+                            <ChevronRight size={14} className="text-slate-300 group-hover/item:text-blue-500 transform translate-x-0 group-hover/item:translate-x-1 transition-all" />
+                          </button>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center space-y-2">
+                          <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
+                            <Search size={16} className="text-slate-300" />
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium">Aucun GE trouvé pour "{globalSearch}"</p>
+                        </div>
+                      )}
+                    </div>
+                    {filteredGEs.length > 0 && (
+                      <div className="bg-slate-50 p-2 border-t border-slate-100">
+                        <button 
+                          onClick={() => {
+                            setActiveTab("parc");
+                            setShowSearchResults(false);
+                          }}
+                          className="w-full py-2 text-[10px] font-black text-blue-600 uppercase tracking-widest hover:bg-white rounded-lg transition-all cursor-pointer"
+                        >
+                          Voir tout le parc
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Quick status counters & Joste AI Assistant Button */}
@@ -900,7 +1145,7 @@ export default function App() {
             <DashboardTab
               db={db}
               onSelectGE={(geId) => {
-                setActiveTab("parc");
+                setActiveGEId(geId);
               }}
             />
           )}
@@ -908,9 +1153,18 @@ export default function App() {
           {activeTab === "planning" && (
             <PlanningTab
               db={db}
-              onAddPlan={handleAddPlan}
-              onUpdatePlan={handleUpdatePlan}
-              onDeletePlan={handleDeletePlan}
+              onAddPlanItem={handleAddPlan}
+              onUpdatePlanItem={handleUpdatePlan}
+              onDeletePlanItem={handleDeletePlan}
+              onProjeterVidanges={handleProjeterVidanges}
+              onEclaterMultiGE={handleEclaterMultiGE}
+              onGenererMaintenances={handleGenererMaintenances}
+              onAddAnomalie={handleAddAnomalie}
+              onUpdateAnomalieStatut={handleUpdateAnomalieStatut}
+              onDeleteAnomalie={handleDeleteAnomalie}
+              onReplacePlan={handleReplacePlan}
+              onAppendPlan={handleAppendPlan}
+              onStartIntervention={handleStartInterventionFromPlan}
             />
           )}
 
@@ -924,10 +1178,11 @@ export default function App() {
             <ParcTab
               db={db}
               onSelectGE={(geId) => {
-                // Focus selection if desired
+                setActiveGEId(geId);
               }}
               onOpenNewGE={handleAddGE}
               onUpdateKva={handleUpdateKva}
+              searchQuery={globalSearch}
             />
           )}
 
@@ -1000,6 +1255,19 @@ export default function App() {
             />
           )}
         </main>
+
+        {/* Global GE Modal */}
+        {activeGEId && (
+          <GEModal
+            db={db}
+            ge={db.parc.find(g => g.id === activeGEId)!}
+            onClose={() => setActiveGEId(null)}
+            onSave={(updated) => {
+              const idx = db.parc.findIndex(g => g.id === activeGEId);
+              if (idx !== -1) handleUpdateGE(idx, updated);
+            }}
+          />
+        )}
 
         {/* Enterprise OS high density Footer */}
         <footer className="h-8 bg-gray-100 border-t border-gray-300 px-6 flex items-center justify-between text-[10px] text-gray-500 font-mono shrink-0">
