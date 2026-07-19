@@ -11,6 +11,7 @@ import {
   onAuthStateChanged,
   User as FirebaseUser
 } from "firebase/auth";
+import { getFirestore, doc, setDoc, getDoc, Firestore } from "firebase/firestore";
 
 // User-provided Firebase credentials & potential env variables fallback
 const fallbackConfig = {
@@ -40,6 +41,7 @@ const hasKeys = !!(
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let provider: GoogleAuthProvider | null = null;
+let dbFirestore: Firestore | null = null;
 let isRealFirebase = false;
 
 const forceSandbox = localStorage.getItem("sthic_force_sandbox") === "true";
@@ -49,8 +51,9 @@ if (hasKeys && !forceSandbox) {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     provider = new GoogleAuthProvider();
+    dbFirestore = getFirestore(app);
     isRealFirebase = true;
-    console.log("🔥 Firebase Client Auth initialized successfully with project: " + firebaseConfig.projectId);
+    console.log("🔥 Firebase Client Auth & Firestore initialized successfully with project: " + firebaseConfig.projectId);
   } catch (error) {
     console.error("⚠️ Failed to initialize real Firebase client:", error);
   }
@@ -324,6 +327,58 @@ export const AuthManager = {
     } else {
       localStorage.removeItem(SIMULATED_ACTIVE_USER_KEY);
       notifySimulatedListeners();
+    }
+  }
+};
+
+/**
+ * CloudManager provides real Firebase Firestore synchronization with high-fidelity local sandbox simulation backup
+ */
+export const CloudManager = {
+  saveToCloud: async (userId: string, data: any): Promise<void> => {
+    if (isRealFirebase && dbFirestore) {
+      const userDocRef = doc(dbFirestore, "users_gmao_db", userId);
+      await setDoc(userDocRef, {
+        data: JSON.stringify(data),
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      // High fidelity sandbox simulation
+      localStorage.setItem(`sthic_simulated_cloud_db_${userId}`, JSON.stringify({
+        data: JSON.stringify(data),
+        updatedAt: new Date().toISOString()
+      }));
+      // Wait a tiny bit to simulate network delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+  },
+
+  loadFromCloud: async (userId: string): Promise<any | null> => {
+    if (isRealFirebase && dbFirestore) {
+      const userDocRef = doc(dbFirestore, "users_gmao_db", userId);
+      const snap = await getDoc(userDocRef);
+      if (snap.exists()) {
+        const payload = snap.data();
+        if (payload?.data) {
+          return JSON.parse(payload.data);
+        }
+      }
+      return null;
+    } else {
+      // High fidelity sandbox simulation
+      const raw = localStorage.getItem(`sthic_simulated_cloud_db_${userId}`);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (raw) {
+        try {
+          const payload = JSON.parse(raw);
+          if (payload?.data) {
+            return JSON.parse(payload.data);
+          }
+        } catch {
+          return null;
+        }
+      }
+      return null;
     }
   }
 };

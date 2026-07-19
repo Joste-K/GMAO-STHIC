@@ -1,0 +1,24 @@
+{
+  "short_name": "GMAO STHIC",
+  "name": "GMAO STHIC - Gestion de Maintenance",
+  "description": "Système de Gestion de Maintenance Assistée par Ordinateur pour groupes électrogènes STHIC SERVICES",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/color/192/000000/settings.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://img.icons8.com/color/512/000000/settings.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0b0f19",
+  "theme_color": "#2563eb",
+  "display": "standalone",
+  "orientation": "portrait"
+}

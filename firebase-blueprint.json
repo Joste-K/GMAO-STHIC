@@ -1,0 +1,27 @@
+{
+  "entities": {
+    "GmaodbDocument": {
+      "title": "GmaodbDocument",
+      "description": "GMAO Database backup for STHIC SERVICES",
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "description": "Stringified JSON database backup payload"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["data", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users_gmao_db/{userId}": {
+      "schema": "GmaodbDocument",
+      "description": "Collection of GMAO database backups indexed by user's auth UID"
+    }
+  }
+}

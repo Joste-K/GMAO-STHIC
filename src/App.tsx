@@ -41,7 +41,9 @@ import {
   Database,
   Menu,
   X,
-  LogOut
+  LogOut,
+  AlertTriangle,
+  Trash2
 } from "lucide-react";
 
 // Local storage key
@@ -256,6 +258,25 @@ export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
+  // Custom in-UI modal confirmation state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDanger?: boolean;
+  } | null>(null);
+
+  const askConfirmation = (title: string, message: string, onConfirm: () => void, isDanger = false) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm,
+      isDanger
+    });
+  };
+
   useEffect(() => {
     const unsub = AuthManager.subscribe((profile) => {
       setUser(profile);
@@ -275,7 +296,17 @@ export default function App() {
   };
 
   const handleResetDB = () => {
-    setDb(buildFactoryDB());
+    askConfirmation(
+      "Réinitialiser la base d'usine",
+      "⚠️ AVERTISSEMENT : Cette action écrasera toutes vos modifications locales et rechargera les données de démonstration d'origine de STHIC SERVICES. Cette opération va recharger l'application.",
+      () => {
+        const fresh = buildFactoryDB();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+        setDb(fresh);
+        window.location.reload();
+      },
+      true
+    );
   };
 
   // 1. Parc GEs handlers
@@ -318,9 +349,14 @@ export default function App() {
   };
 
   const handleDeleteGE = (idx: number) => {
-    if (confirm("Confirmez-vous la suppression définitive de ce Groupe Électrogène ?")) {
-      setDb(prev => ({ ...prev, parc: prev.parc.filter((_, i) => i !== idx) }));
-    }
+    askConfirmation(
+      "Supprimer le Groupe Électrogène",
+      "Confirmez-vous la suppression définitive de ce Groupe Électrogène de l'inventaire ?",
+      () => {
+        setDb(prev => ({ ...prev, parc: prev.parc.filter((_, i) => i !== idx) }));
+      },
+      true
+    );
   };
 
   const handleUpdateKva = (id: string, value: number | "") => {
@@ -344,9 +380,14 @@ export default function App() {
   };
 
   const handleDeleteInter = (idx: number) => {
-    if (confirm("Confirmez-vous la suppression de ce rapport d'intervention ?")) {
-      setDb(prev => ({ ...prev, inter: prev.inter.filter((_, i) => i !== idx) }));
-    }
+    askConfirmation(
+      "Supprimer le rapport d'intervention",
+      "Confirmez-vous la suppression définitive de ce rapport d'intervention de l'historique ?",
+      () => {
+        setDb(prev => ({ ...prev, inter: prev.inter.filter((_, i) => i !== idx) }));
+      },
+      true
+    );
   };
 
   // 3. Planning handlers
@@ -363,9 +404,14 @@ export default function App() {
   };
 
   const handleDeletePlan = (idx: number) => {
-    if (confirm("Supprimer cette planification ?")) {
-      setDb(prev => ({ ...prev, plan: prev.plan.filter((_, i) => i !== idx) }));
-    }
+    askConfirmation(
+      "Supprimer la planification",
+      "Confirmez-vous la suppression de cette planification de maintenance ?",
+      () => {
+        setDb(prev => ({ ...prev, plan: prev.plan.filter((_, i) => i !== idx) }));
+      },
+      true
+    );
   };
 
   // 4. Tasks handlers
@@ -382,9 +428,14 @@ export default function App() {
   };
 
   const handleDeleteTask = (idx: number) => {
-    if (confirm("Supprimer cette tâche d'intervention active ?")) {
-      setDb(prev => ({ ...prev, taches: prev.taches.filter((_, i) => i !== idx) }));
-    }
+    askConfirmation(
+      "Supprimer la tâche d'intervention",
+      "Confirmez-vous la suppression de cette tâche d'intervention active du tableau de bord ?",
+      () => {
+        setDb(prev => ({ ...prev, taches: prev.taches.filter((_, i) => i !== idx) }));
+      },
+      true
+    );
   };
 
   // 5. Warehouse / Magasin handlers
@@ -415,9 +466,14 @@ export default function App() {
   };
 
   const handleDeleteArticle = (idx: number) => {
-    if (confirm("Supprimer cet article du magasin ?")) {
-      setDb(prev => ({ ...prev, magasin: prev.magasin.filter((_, i) => i !== idx) }));
-    }
+    askConfirmation(
+      "Supprimer l'article",
+      "Confirmez-vous la suppression définitive de cet article du magasin ? Cette action est irréversible et affectera l'inventaire.",
+      () => {
+        setDb(prev => ({ ...prev, magasin: prev.magasin.filter((_, i) => i !== idx) }));
+      },
+      true
+    );
   };
 
   const handleCheckoutCart = (cart: any[], client: string, ge: string, workRef: string) => {
@@ -488,9 +544,14 @@ export default function App() {
   };
 
   const handleDeleteMateriel = (idx: number) => {
-    if (confirm("Supprimer ce matériel ou véhicule de l'inventaire ?")) {
-      setDb(prev => ({ ...prev, materiel: prev.materiel.filter((_, i) => i !== idx) }));
-    }
+    askConfirmation(
+      "Supprimer le matériel / véhicule",
+      "Confirmez-vous la suppression de ce matériel ou véhicule de l'inventaire de la flotte ?",
+      () => {
+        setDb(prev => ({ ...prev, materiel: prev.materiel.filter((_, i) => i !== idx) }));
+      },
+      true
+    );
   };
 
   // 7. Commercial / Invoices handlers
@@ -527,9 +588,14 @@ export default function App() {
   };
 
   const handleDeleteVente = (idx: number) => {
-    if (confirm("Confirmez-vous la suppression de cette facture ?")) {
-      setDb(prev => ({ ...prev, ventes: prev.ventes.filter((_, i) => i !== idx) }));
-    }
+    askConfirmation(
+      "Supprimer la facture",
+      "Confirmez-vous la suppression définitive de cette facture commerciale ?",
+      () => {
+        setDb(prev => ({ ...prev, ventes: prev.ventes.filter((_, i) => i !== idx) }));
+      },
+      true
+    );
   };
 
   // 8. Sizing / Bilans handlers
@@ -546,9 +612,14 @@ export default function App() {
   };
 
   const handleDeleteBilan = (idx: number) => {
-    if (confirm("Supprimer définitivement ce dossier de bilan de puissance ?")) {
-      setDb(prev => ({ ...prev, bilans: prev.bilans.filter((_, i) => i !== idx) }));
-    }
+    askConfirmation(
+      "Supprimer le bilan de puissance",
+      "Confirmez-vous la suppression définitive de ce dossier d'étude de bilan de puissance ?",
+      () => {
+        setDb(prev => ({ ...prev, bilans: prev.bilans.filter((_, i) => i !== idx) }));
+      },
+      true
+    );
   };
 
   // Navigation configurations
@@ -590,12 +661,22 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-[#f0f0f0] text-slate-800 font-sans overflow-hidden antialiased">
+    <div className="flex h-screen bg-[#f0f0f0] text-slate-800 font-sans overflow-hidden antialiased relative">
+      {/* Backdrop overlay on mobile when sidebar is open */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/55 z-35 md:hidden transition-opacity duration-300"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar navigation */}
       <aside
         className={`${
-          sidebarOpen ? "w-[280px]" : "w-0 md:w-[70px]"
-        } bg-[#111111] text-gray-300 flex flex-col h-full transition-all duration-300 overflow-hidden relative shrink-0 z-20 border-r border-[#333]`}
+          sidebarOpen 
+            ? "translate-x-0 w-[280px]" 
+            : "-translate-x-full md:translate-x-0 w-0 md:w-[70px]"
+        } fixed md:static top-0 left-0 bottom-0 bg-[#111111] text-gray-300 flex flex-col h-full transition-all duration-300 overflow-hidden shrink-0 z-40 md:z-20 border-r border-[#333]`}
       >
         {/* Brand header */}
         <div className="h-14 px-5 flex items-center justify-between border-b border-[#222] shrink-0 bg-[#0c0c0c]">
@@ -635,7 +716,12 @@ export default function App() {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => setActiveTab(item.id)}
+                        onClick={() => {
+                          setActiveTab(item.id);
+                          if (window.innerWidth < 768) {
+                            setSidebarOpen(false);
+                          }
+                        }}
                         className={`w-full flex items-center gap-3 px-3 py-1.5 transition-all cursor-pointer text-[11px] uppercase tracking-wider font-semibold ${
                           isActive
                             ? "bg-[#222222] text-white border-r-2 border-blue-500"
@@ -821,6 +907,7 @@ export default function App() {
           {activeTab === "data" && (
             <DonneesTab
               db={db}
+              user={user}
               onRestoreDB={handleRestoreDB}
               onResetDB={handleResetDB}
             />
@@ -829,7 +916,7 @@ export default function App() {
 
         {/* Enterprise OS high density Footer */}
         <footer className="h-8 bg-gray-100 border-t border-gray-300 px-6 flex items-center justify-between text-[10px] text-gray-500 font-mono shrink-0">
-          <div>GMAO STHIC v1.0.0 // STATION: PORT_3000 // CONGO</div>
+          <div>© GMAO- STHIC 2026</div>
           <div className="flex gap-4">
             <span>PARC: {db.parc.filter(g => g.etat === "Opérationnel").length}/{db.parc.length} OP</span>
             <span>TACHES: {db.taches.filter(t => t.statut !== "Terminé").length} ACTIVES</span>
@@ -837,6 +924,55 @@ export default function App() {
           </div>
         </footer>
       </div>
+
+      {/* Custom Confirmation Modal */}
+      {confirmModal && confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-md w-full border border-slate-100 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header / Accent bar */}
+            <div className={`h-1.5 ${confirmModal.isDanger ? "bg-red-600" : "bg-blue-600"}`} />
+            
+            <div className="p-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className={`p-2.5 rounded-xl shrink-0 ${confirmModal.isDanger ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
+                  <AlertTriangle size={24} />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-black text-slate-900 tracking-tight">
+                    {confirmModal.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                    {confirmModal.message}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  onClick={() => setConfirmModal(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer border-0"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => {
+                    confirmModal.onConfirm();
+                    setConfirmModal(null);
+                  }}
+                  className={`px-4 py-2 text-white rounded-xl text-xs font-bold transition-all cursor-pointer border-0 shadow-sm ${
+                    confirmModal.isDanger 
+                      ? "bg-red-600 hover:bg-red-700 shadow-red-600/10" 
+                      : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/10"
+                  }`}
+                >
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
