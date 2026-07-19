@@ -80,31 +80,74 @@ export function LoginView({ onSuccess }: Props) {
             </div>
 
             {/* Simulated environment status banner */}
-            <div className={`p-3 mb-4 flex gap-3 text-[11px] leading-relaxed border ${
+            <div className={`p-3 mb-4 flex flex-col gap-2 text-[11px] leading-relaxed border ${
               isReal 
                 ? "bg-green-50 border-green-200 text-green-800" 
                 : "bg-amber-50 border-amber-200 text-amber-800"
             }`}>
-              <Cpu size={16} className={`shrink-0 ${isReal ? "text-green-600" : "text-amber-600"}`} />
-              <div>
-                <span className="font-bold">Statut Firebase : </span>
-                {isReal ? (
-                  <span>Connecté en temps réel à l'infrastructure cloud. Authentification active.</span>
-                ) : (
-                  <span>
-                    Sandbox de démonstration. Authentification locale persistée active (E-mail / Gmail simulé).
-                  </span>
-                )}
+              <div className="flex gap-3">
+                <Cpu size={16} className={`shrink-0 ${isReal ? "text-green-600" : "text-amber-600"}`} />
+                <div>
+                  <span className="font-bold">Statut Firebase : </span>
+                  {isReal ? (
+                    <span>Connecté en temps réel à l'infrastructure cloud. Authentification active.</span>
+                  ) : (
+                    <span>
+                      {AuthManager.isSandboxForced() 
+                        ? "Simulation locale forcée (Sandbox). Authentification locale persistée active."
+                        : "Sandbox de démonstration. Authentification locale persistée active (E-mail / Gmail simulé)."
+                      }
+                    </span>
+                  )}
+                </div>
               </div>
+              {!isReal && AuthManager.isSandboxForced() && (
+                <button
+                  type="button"
+                  onClick={() => AuthManager.setForceSandbox(false)}
+                  className="mt-1 text-left text-[10px] text-blue-700 hover:underline font-bold bg-transparent border-0 p-0 cursor-pointer self-start uppercase tracking-wider"
+                >
+                  🚀 Réactiver la connexion Firebase réelle
+                </button>
+              )}
             </div>
 
             {/* Error alerts */}
-            {error && (
+            {error && error === "[ERR_UNAUTHORIZED_DOMAIN]" ? (
+              <div className="p-4 mb-4 bg-amber-50 border border-amber-300 rounded-xs text-slate-800 text-[11px] flex flex-col gap-3">
+                <div className="flex gap-2 font-bold text-amber-900 uppercase tracking-wide">
+                  <AlertTriangle size={15} className="shrink-0 text-amber-700 mt-0.5" />
+                  <span>Domaine non autorisé dans Firebase</span>
+                </div>
+                <div className="text-slate-700 leading-relaxed font-semibold">
+                  Le domaine actuel <code className="bg-amber-100 text-amber-950 px-1 py-0.5 rounded font-mono select-all font-bold">{window.location.hostname}</code> n'est pas encore configuré dans la liste des domaines autorisés de votre projet Firebase.
+                </div>
+                <div className="text-[10px] space-y-1.5 bg-white border border-amber-200/60 p-2.5 rounded-xs font-mono text-slate-600">
+                  <div className="font-bold text-slate-800 uppercase tracking-wider mb-1">🛠️ Comment corriger :</div>
+                  <div>1. Ouvrez la <a href="https://console.firebase.google.com/project/gmao-sthic/authentication/settings" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline font-bold hover:text-blue-800">Console Firebase settings</a>.</div>
+                  <div>2. Allez dans <span className="font-bold">Authorized Domains</span> (Domaines autorisés).</div>
+                  <div>3. Cliquez sur "Ajouter un domaine" et saisissez le domaine actuel :</div>
+                  <div className="bg-gray-100 text-gray-800 p-1.5 rounded-xs font-bold border border-gray-200 select-all text-center mt-1 text-[11px] select-all">
+                    {window.location.hostname}
+                  </div>
+                </div>
+                <div className="border-t border-amber-200 pt-2 flex flex-col gap-1.5">
+                  <div className="text-slate-500 font-bold uppercase text-[9px] tracking-wider">OU OPTION DE SECOURS IMMÉDIATE :</div>
+                  <button
+                    onClick={() => AuthManager.setForceSandbox(true)}
+                    type="button"
+                    className="w-full h-8 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xs text-[10px] uppercase tracking-wider transition-colors cursor-pointer border-0 shadow-2xs"
+                  >
+                    Activer la simulation locale (Sandbox)
+                  </button>
+                </div>
+              </div>
+            ) : error ? (
               <div className="p-3 mb-4 bg-red-50 border border-red-200 text-red-800 text-[11px] flex gap-2 font-semibold">
                 <AlertTriangle size={14} className="shrink-0 text-red-600 mt-0.5" />
                 <div>{error}</div>
               </div>
-            )}
+            ) : null}
 
             {/* Login / Signup form */}
             <form onSubmit={handleSubmit} className="space-y-4">

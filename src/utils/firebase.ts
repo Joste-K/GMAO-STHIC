@@ -42,7 +42,9 @@ let auth: Auth | null = null;
 let provider: GoogleAuthProvider | null = null;
 let isRealFirebase = false;
 
-if (hasKeys) {
+const forceSandbox = localStorage.getItem("sthic_force_sandbox") === "true";
+
+if (hasKeys && !forceSandbox) {
   try {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
@@ -53,7 +55,11 @@ if (hasKeys) {
     console.error("⚠️ Failed to initialize real Firebase client:", error);
   }
 } else {
-  console.log("ℹ️ Firebase credentials missing. Operating in high-fidelity sandbox/simulation mode.");
+  if (forceSandbox) {
+    console.log("ℹ️ Sandbox mode manually forced by user.");
+  } else {
+    console.log("ℹ️ Firebase credentials missing. Operating in high-fidelity sandbox/simulation mode.");
+  }
 }
 
 export interface UserProfile {
@@ -103,6 +109,13 @@ const saveSimulatedUsers = (users: Record<string, { email: string; password?: st
  */
 export const AuthManager = {
   isRealFirebase: () => isRealFirebase,
+
+  isSandboxForced: () => forceSandbox,
+
+  setForceSandbox: (val: boolean) => {
+    localStorage.setItem("sthic_force_sandbox", val ? "true" : "false");
+    window.location.reload();
+  },
 
   /**
    * Monitor auth state changes
@@ -262,8 +275,13 @@ export const AuthManager = {
           isSimulated: false
         };
       } catch (err: any) {
-        console.error("Google login popup failed/blocked. Falling back to alternative.", err);
-        throw new Error("Le pop-up de connexion Google a été bloqué ou fermé.");
+        console.error("Google login popup failed/blocked.", err);
+        const code = err?.code || "";
+        const message = err?.message || "";
+        if (code === "auth/unauthorized-domain" || message.includes("unauthorized-domain")) {
+          throw new Error(`[ERR_UNAUTHORIZED_DOMAIN]`);
+        }
+        throw new Error(err.message || "Le pop-up de connexion Google a été bloqué ou fermé.");
       }
     } else {
       // High fidelity simulation of Gmail auth inside preview
