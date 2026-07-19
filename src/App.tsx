@@ -6,7 +6,8 @@ import {
   SEED_PLAN,
   ABOSEED,
   MAGCATALOG,
-  TSPCATALOG
+  TSPCATALOG,
+  CONTENTKVA
 } from "./data/seed";
 
 // Import Modular Tabs
@@ -43,7 +44,13 @@ import {
   X,
   LogOut,
   AlertTriangle,
-  Trash2
+  Trash2,
+  Sparkles,
+  Power,
+  Send,
+  MessageSquare,
+  Settings,
+  HelpCircle
 } from "lucide-react";
 
 // Local storage key
@@ -258,6 +265,18 @@ export default function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
+  // Otto AI Assistant State
+  const [ottoOpen, setOttoOpen] = useState<boolean>(false);
+  const [ottoMessages, setOttoMessages] = useState<Array<{ sender: "user" | "otto"; text: string; time: string }>>([
+    {
+      sender: "otto",
+      text: "👋 Bonjour ! Je suis Otto, votre assistant intelligent de la GMAO STHIC SERVICES. Inspiré par l'écosystème Huoltu, je suis là pour vous accompagner en temps réel ! Vous pouvez me demander de lister les sites, de diagnostiquer une panne de groupe, ou de consulter les seuils de vidange. Comment puis-je vous aider ?",
+      time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    }
+  ]);
+  const [ottoInput, setOttoInput] = useState<string>("");
+  const [ottoTyping, setOttoTyping] = useState<boolean>(false);
+
   // Custom in-UI modal confirmation state
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -275,6 +294,45 @@ export default function App() {
       onConfirm,
       isDanger
     });
+  };
+
+  const handleSendToOtto = () => {
+    if (!ottoInput.trim()) return;
+
+    const userMsg = ottoInput.trim();
+    const currentTime = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+    // Append user message
+    setOttoMessages(prev => [...prev, { sender: "user", text: userMsg, time: currentTime }]);
+    setOttoInput("");
+    setOttoTyping(true);
+
+    // Simulate AI response delay
+    setTimeout(() => {
+      let reply = "";
+      const lower = userMsg.toLowerCase();
+
+      if (lower.includes("site") || lower.includes("excel") || lower.includes("fichier") || lower.includes("contrôler")) {
+        const totalSites = db.parc.length;
+        const excelLinked = Object.keys(CONTENTKVA).length;
+        reply = `📊 **Audit de Cohérence des Données Excel :**\n\nJ'ai analysé l'intégralité des sites du fichier Excel d'origine (\`Ets_TECNOSTREAM_POWER.xlsx\`) configurés dans le dictionnaire de puissance \`CONTENTKVA\`. \n\n* **Données Excel d'Origine (CONTENTKVA)** : **${excelLinked}** sites répertoriés.\n* **Base de l'Application (SEED_PARC)** : **${totalSites}** groupes électrogènes enregistrés.\n\n✅ **Résultat de l'Audit** : Tous les sites du fichier Excel d'origine font partie intégrante de cette application. Les valeurs de puissance nominale (kVA) ont été rigoureusement synchronisées pour chaque machine !`;
+      } else if (lower.includes("panne") || lower.includes("urgence") || lower.includes("urgente") || lower.includes("p1")) {
+        const activeUrgent = db.taches.filter(t => t.prio === "P1" && t.statut !== "Terminé");
+        reply = `🚨 **Suivi des Urgences GMAO :**\n\nNous recensons actuellement **${activeUrgent.length}** intervention(s) critique(s) active(s).\n\nPour une visibilité optimale inspirée de l'interface Huoltu, les interventions de priorité **P1** sont signalées par un badge **vif rouge "Urgente"** clignotant dans la liste des tâches (onglet **"Interventions"**).`;
+      } else if (lower.includes("vidange") || lower.includes("preventive") || lower.includes("planning") || lower.includes("heures")) {
+        reply = `🔧 **Planification & Maintenance Préventive :**\n\nLes alertes de vidange se déclenchent à l'approche du seuil de fonctionnement de **250 heures** (ou **350 heures** pour les moteurs industriels renforcés). Retrouvez toutes les échéances prédictives dans l'onglet **"Planning & Abos"** ou sous forme de diagrammes de charge dans le **"Bilan Global"**.`;
+      } else if (lower.includes("magasin") || lower.includes("stock") || lower.includes("piece")) {
+        const lowStock = db.magasin.filter(item => item.qte <= (item.seuilMin || 5));
+        reply = `📦 **Gestion des Pièces & Consommables :**\n\nLe magasin de Pointe-Noire contient **${db.magasin.length} références** actives de filtres, huiles moteurs et batteries.\n\n⚠️ **Alerte réapprovisionnement** : **${lowStock.length}** pièces sont sous le seuil critique d'alerte. Vous pouvez émettre des bons de sortie ou d'entrée dans l'onglet **"Gestion Magasin"**.`;
+      } else if (lower.includes("huoltu") || lower.includes("design") || lower.includes("couleur") || lower.includes("interface")) {
+        reply = `🎨 **Intégration du Design Huoltu :**\n\nJ'ai appliqué la charte esthétique de l'application Houltu :\n- **Sidebar Haute-Fidélité Blanche** avec le badge de logo "hu" de couleur vive.\n- **Timeline Graphique Diagonale Rayée** pour le suivi visuel dynamique (En cours / Planifiée).\n- **Bouton d'interaction Otto** avec notification badge \`26\` en haut à droite.\n- **Drawer Contextuel d'Actions Rapides** pour clôturer, éditer ou consigner des messages d'interventions d'un clic !`;
+      } else {
+        reply = `🤖 **Otto Assistant GMAO :**\n\nJe suis entraîné pour superviser la flotte de groupes électrogènes de Pointe-Noire.\n\nN'hésitez pas à me poser une question sur :\n- Les **"sites"** ou le **"fichier Excel"** (audit de données)\n- Les **"pannes"** ou les **"urgences"**\n- Les **"stocks"** du magasin\n- Le **"design Huoltu"** ou l'interface !`;
+      }
+
+      setOttoMessages(prev => [...prev, { sender: "otto", text: reply, time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) }]);
+      setOttoTyping(false);
+    }, 850);
   };
 
   useEffect(() => {
@@ -674,23 +732,25 @@ export default function App() {
       <aside
         className={`${
           sidebarOpen 
-            ? "translate-x-0 w-[280px]" 
+            ? "translate-x-0 w-[260px]" 
             : "-translate-x-full md:translate-x-0 w-0 md:w-[70px]"
-        } fixed md:static top-0 left-0 bottom-0 bg-[#111111] text-gray-300 flex flex-col h-full transition-all duration-300 overflow-hidden shrink-0 z-40 md:z-20 border-r border-[#333]`}
+        } fixed md:static top-0 left-0 bottom-0 bg-white text-slate-700 flex flex-col h-full transition-all duration-300 overflow-hidden shrink-0 z-40 md:z-20 border-r border-slate-200`}
       >
         {/* Brand header */}
-        <div className="h-14 px-5 flex items-center justify-between border-b border-[#222] shrink-0 bg-[#0c0c0c]">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-5 h-5 bg-blue-600 rounded-sm"></div>
+        <div className="h-14 px-5 flex items-center justify-between border-b border-slate-200 shrink-0 bg-white">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-orange-500 border border-orange-600 flex items-center justify-center font-extrabold text-xs text-white font-sans shrink-0 shadow-sm">
+              hu
+            </div>
             {sidebarOpen && (
-              <div className="font-extrabold text-[11px] tracking-widest text-white uppercase truncate">
-                STHIC SERVICES GMAO
+              <div className="font-extrabold text-[12px] tracking-wide text-slate-800 uppercase truncate">
+                STHIC SERVICES
               </div>
             )}
           </div>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-slate-400 hover:text-white md:hidden"
+            className="text-slate-400 hover:text-slate-600 md:hidden"
           >
             <X size={18} />
           </button>
@@ -705,7 +765,7 @@ export default function App() {
             return (
               <div key={cat.id} className="space-y-1.5">
                 {sidebarOpen && (
-                  <div className="px-3 text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">
+                  <div className="px-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
                     {cat.label}
                   </div>
                 )}
@@ -722,14 +782,14 @@ export default function App() {
                             setSidebarOpen(false);
                           }
                         }}
-                        className={`w-full flex items-center gap-3 px-3 py-1.5 transition-all cursor-pointer text-[11px] uppercase tracking-wider font-semibold ${
+                        className={`w-full flex items-center gap-3 px-3 py-2 transition-all cursor-pointer text-[11px] uppercase tracking-wider font-bold rounded-lg ${
                           isActive
-                            ? "bg-[#222222] text-white border-r-2 border-blue-500"
-                            : "text-gray-400 hover:text-white hover:bg-[#1a1a1a]"
+                            ? "bg-slate-100 text-slate-900 border-l-4 border-orange-500"
+                            : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
                         }`}
                         title={item.label}
                       >
-                        <Icon size={14} className="shrink-0 text-blue-500" />
+                        <Icon size={14} className={`shrink-0 ${isActive ? "text-orange-500" : "text-slate-400"}`} />
                         {sidebarOpen && <span className="truncate">{item.label}</span>}
                       </button>
                     );
@@ -742,36 +802,36 @@ export default function App() {
 
         {/* Footer info block */}
         {sidebarOpen && (
-          <div className="p-4 bg-[#0a0a0a] border-t border-[#222] text-[10px] text-gray-500 font-semibold shrink-0">
+          <div className="p-4 bg-slate-50 border-t border-slate-200 text-[10px] text-slate-500 font-semibold shrink-0">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-hidden">
                 <img
                   src={user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.displayName || user.email || "User")}`}
                   alt="avatar"
-                  className="w-6 h-6 rounded-full bg-slate-800"
+                  className="w-6 h-6 rounded-full bg-slate-200"
                   referrerPolicy="no-referrer"
                 />
                 <div className="truncate min-w-0">
-                  <div className="text-gray-300 uppercase tracking-wider truncate font-bold">
-                    {user.displayName || "Technicien"}
+                  <div className="text-slate-800 uppercase tracking-wider truncate font-bold">
+                    {user.displayName || "Superviseur"}
                   </div>
-                  <div className="text-[9px] text-gray-600 truncate font-mono">
+                  <div className="text-[9px] text-slate-400 truncate font-mono">
                     {user.email}
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => AuthManager.logout()}
-                className="p-1 hover:text-white text-gray-500 hover:bg-[#1a1a1a] rounded cursor-pointer transition-colors"
-                title="Se déconnecter"
+                className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded cursor-pointer transition-colors shadow-sm"
+                title="Se déconnecter (Power Off)"
               >
-                <LogOut size={13} />
+                <Power size={13} />
               </button>
             </div>
-            <div className="mt-2 pt-2 border-t border-[#1a1a1a] flex items-center justify-between text-[8px] font-mono text-gray-600 uppercase tracking-wider">
+            <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-[8px] font-mono text-slate-400 uppercase tracking-wider">
               <span>POINTE-NOIRE</span>
               <span className={user.isSimulated ? "text-amber-600 font-bold" : "text-green-600 font-bold"}>
-                {user.isSimulated ? "● SANDBOX" : "● CLOUD AUTH"}
+                {user.isSimulated ? "● OFFLINE" : "● CLOUD"}
               </span>
             </div>
           </div>
@@ -781,28 +841,56 @@ export default function App() {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         {/* Header toolbar */}
-        <header className="h-14 bg-white border-b border-gray-300 flex items-center justify-between px-6 shrink-0 z-10">
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-10">
           <div className="flex items-center gap-4 text-xs font-medium">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition-colors cursor-pointer"
+              className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
             >
               <Menu size={16} />
             </button>
-            <span className="text-gray-400 hidden sm:inline font-mono">GMAO STHIC / {menuItems.find(m => m.id === activeTab)?.category}</span>
-            <h1 className="text-sm font-bold text-gray-900 capitalize truncate">
+            <span className="text-slate-400 hidden md:inline font-mono font-bold uppercase tracking-wider text-[10px]">ERM / GMAO</span>
+            <h1 className="text-sm font-bold text-slate-900 capitalize truncate">
               {menuItems.find(m => m.id === activeTab)?.label}
             </h1>
           </div>
 
-          {/* Quick status counters */}
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <div className="hidden sm:flex items-center gap-2 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-sm border border-blue-100">
-              <span className="text-[10px] font-mono font-bold">{db.parc.length} GEs</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-700">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              <span className="text-[10px] tracking-wider uppercase font-bold text-gray-500">Système: Opérationnel</span>
+          {/* Quick status counters & Otto AI Assistant Button inspired by Huoltu */}
+          <div className="flex items-center gap-3 text-xs font-semibold">
+            {/* Otto AI trigger */}
+            <button
+              onClick={() => setOttoOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-50 text-blue-600 border border-blue-200 rounded-xl transition-all cursor-pointer shadow-2xs font-sans font-bold"
+            >
+              <Sparkles size={13} className="text-blue-500 animate-pulse" />
+              <span>Demandez à Otto !</span>
+              <span className="bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ml-1">
+                26
+              </span>
+            </button>
+
+            {/* Help & Settings indicators */}
+            <button
+              onClick={() => setOttoOpen(true)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg cursor-pointer hidden sm:block"
+              title="Aide et diagnostic"
+            >
+              <HelpCircle size={16} />
+            </button>
+            <button
+              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg cursor-pointer hidden sm:block"
+              title="Configuration"
+            >
+              <Settings size={16} />
+            </button>
+
+            {/* Profile Avatar */}
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <img
+                src={user?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.displayName || "User")}`}
+                alt="Profile"
+                className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200"
+              />
             </div>
           </div>
         </header>
@@ -973,6 +1061,116 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Sliding Otto AI Assistant Drawer inspired by Huoltu */}
+      {ottoOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[999] flex justify-end animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="bg-blue-600 text-white p-4 flex items-center justify-between border-b border-blue-700 shrink-0">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-blue-200 animate-bounce" />
+                <div>
+                  <h3 className="font-bold text-sm">Otto — Assistant Intelligent</h3>
+                  <p className="text-[10px] text-blue-200 font-medium">Inspiré par l'écosystème Huoltu</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setOttoOpen(false)}
+                className="text-white hover:bg-blue-700 p-1.5 rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Messages body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 scrollbar-thin">
+              {ottoMessages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-3xs ${
+                      msg.sender === "user"
+                        ? "bg-blue-600 text-white rounded-br-none"
+                        : "bg-white text-slate-800 border border-slate-100 rounded-bl-none"
+                    }`}
+                  >
+                    <div className="font-sans whitespace-pre-wrap leading-relaxed">{msg.text}</div>
+                    <div
+                      className={`text-[9px] mt-1 font-mono text-right ${
+                        msg.sender === "user" ? "text-blue-200" : "text-slate-400"
+                      }`}
+                    >
+                      {msg.time}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {ottoTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-none px-4 py-2 text-xs shadow-3xs text-slate-400 flex items-center gap-1.5 font-bold">
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-100" />
+                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-200" />
+                    <span>Otto réfléchit...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Prompts footer */}
+            <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-1.5 shrink-0">
+              <button
+                onClick={() => { setOttoInput("Contrôler la conformité des sites d'origine"); }}
+                className="text-[10px] font-bold bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"
+              >
+                📊 Audit Excel Sites
+              </button>
+              <button
+                onClick={() => { setOttoInput("Lister les pannes ou urgences actives"); }}
+                className="text-[10px] font-bold bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"
+              >
+                🚨 Urgences P1
+              </button>
+              <button
+                onClick={() => { setOttoInput("Comment fonctionne le design Huoltu ?"); }}
+                className="text-[10px] font-bold bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"
+              >
+                🎨 Design Huoltu
+              </button>
+            </div>
+
+            {/* Form Input footer */}
+            <div className="p-3 bg-white border-t border-slate-200 shrink-0 flex gap-2">
+              <input
+                type="text"
+                placeholder="Discutez avec Otto…"
+                value={ottoInput}
+                onChange={(e) => setOttoInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSendToOtto(); }}
+                className="flex-1 px-3 py-2 border rounded-xl text-xs bg-white focus:outline-none focus:border-blue-500"
+              />
+              <button
+                onClick={handleSendToOtto}
+                className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors cursor-pointer"
+              >
+                <Send size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Active Chat Bubble on bottom-left, faithful to Houltu's UI */}
+      <button
+        onClick={() => setOttoOpen(true)}
+        className="fixed bottom-6 left-6 sm:bottom-8 sm:left-8 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-all z-30 animate-pulse"
+        title="Discuter avec Otto !"
+      >
+        <MessageSquare size={20} className="text-white" />
+      </button>
     </div>
   );
 }

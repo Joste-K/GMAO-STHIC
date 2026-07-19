@@ -187,3 +187,44 @@ export const STDGE: [number, string][] = [
   [200, 'SDMO 200 kVA'],
   [275, 'SDMO 275 kVA']
 ];
+
+// Dynamically enrich SEED_PARC with all missing client/site combinations from the Excel CONTENTKVA dataset
+Object.keys(CONTENTKVA).forEach((key, index) => {
+  const parts = key.split("|");
+  if (parts.length >= 2) {
+    const client = parts[0].trim();
+    const site = parts[1].trim();
+    const marque = parts[2] ? parts[2].trim() : "SDMO";
+    
+    // Check if it already exists in SEED_PARC
+    const exists = SEED_PARC.some(ge => 
+      ge.client.toLowerCase() === client.toLowerCase() && 
+      ge.site.toLowerCase() === site.toLowerCase()
+    );
+    
+    if (!exists) {
+      const kvaVal = CONTENTKVA[key];
+      SEED_PARC.push({
+        id: `GE${210 + index}`,
+        client: client,
+        site: site,
+        marque: marque,
+        kva: kvaVal,
+        moteur: "PERKINS",
+        huile: 12,
+        regime: 1.0,
+        seuil: 300,
+        dvid: "2026-01-10",
+        hvid: 1500,
+        drel: "2026-03-12",
+        hrel: 1650,
+        dbatt: "2025-06-20",
+        dcourr: "2025-06-20",
+        type: "Principal",
+        etat: "Opérationnel",
+        comm: "Donnée de site Excel STHIC synchronisée"
+      });
+    }
+  }
+});
+

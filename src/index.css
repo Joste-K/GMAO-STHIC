@@ -62,3 +62,25 @@ table td {
   background: #94a3b8;
 }
 
+/* Repeating diagonal stripe patterns for the visual timeline inspired by Huoltu */
+.bg-striped-gray {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #94a3b8,
+    #94a3b8 10px,
+    #64748b 10px,
+    #64748b 20px
+  );
+}
+
+.bg-striped-red-orange {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #f97316,
+    #f97316 10px,
+    #ef4444 10px,
+    #ef4444 20px
+  );
+}
+
+

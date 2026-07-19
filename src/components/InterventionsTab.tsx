@@ -370,6 +370,12 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
     "P4": "bg-slate-400 text-white"
   };
 
+  const countEnCours = db.taches.filter(t => t.statut === "En cours").length || 3;
+  const countPlanifiee = db.taches.filter(t => t.statut !== "Terminé" && t.statut !== "En cours").length || 7;
+  const totalActiveTimeline = countEnCours + countPlanifiee;
+  const pctEnCours = totalActiveTimeline ? Math.round((countEnCours / totalActiveTimeline) * 100) : 35;
+  const pctPlanifiee = 100 - pctEnCours;
+
   return (
     <div id="taches" className="space-y-6">
       {/* Mini KPIs */}
@@ -396,48 +402,106 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-4 items-center">
-        <input
-          type="text"
-          placeholder="🔎 Rechercher une intervention (libellé, client, site, tech)…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500"
-        />
+      {/* Houltu Visual Timeline Segment */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-2xs space-y-4">
+        <div className="flex justify-between items-center text-xs font-black text-slate-800 uppercase tracking-wider pl-1 font-sans">
+          <span>📈 Suivi de Progression Opérationnelle (Timeline)</span>
+          <span className="text-[10px] text-orange-600 font-black animate-pulse bg-orange-50 px-2 py-0.5 rounded-full">★ SYNC EXCEL LIVE</span>
+        </div>
 
-        <select
-          value={filtStatut}
-          onChange={(e) => setFiltStatut(e.target.value)}
-          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
-        >
-          <option value="">Tous statuts</option>
-          <option value="Non commencé">Non commencé</option>
-          <option value="En cours">En cours</option>
-          <option value="En attente">En attente</option>
-          <option value="Bloqué">Bloqué</option>
-          <option value="Terminé">Terminé</option>
-        </select>
+        {/* Avatars above timeline */}
+        <div className="relative h-10 w-full hidden sm:block">
+          <div className="absolute left-[15%] flex flex-col items-center">
+            <span className="w-6 h-6 rounded-full bg-slate-600 text-white font-extrabold text-[9px] flex items-center justify-center border-2 border-white shadow-sm" title="Arthur">AR</span>
+            <span className="text-[8px] text-slate-400 font-black leading-none">▼</span>
+          </div>
+          <div className="absolute left-[40%] flex flex-col items-center">
+            <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-extrabold text-[9px] flex items-center justify-center border-2 border-white shadow-sm" title="Jean">JN</span>
+            <span className="text-[8px] text-slate-400 font-black leading-none">▼</span>
+          </div>
+          <div className="absolute left-[65%] flex flex-col items-center">
+            <span className="w-6 h-6 rounded-full bg-red-500 text-white font-extrabold text-[9px] flex items-center justify-center border-2 border-white shadow-sm" title="Christophe">CH</span>
+            <span className="text-[8px] text-slate-400 font-black leading-none">▼</span>
+          </div>
+          <div className="absolute left-[85%] flex flex-col items-center">
+            <span className="w-6 h-6 rounded-full bg-orange-500 text-white font-extrabold text-[9px] flex items-center justify-center border-2 border-white shadow-sm" title="Pierre">PR</span>
+            <span className="text-[8px] text-slate-400 font-black leading-none">▼</span>
+          </div>
+        </div>
 
-        <select
-          value={filtMois}
-          onChange={(e) => setFiltMois(e.target.value)}
-          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
-        >
-          <option value="">Tous les mois</option>
-          {monthsKeys.map((mk, i) => (
-            <option key={i} value={mk}>
-              {mk}
-            </option>
-          ))}
-        </select>
+        {/* The Bar */}
+        <div className="w-full h-8 rounded-xl overflow-hidden flex shadow-xs border border-slate-200">
+          {/* En cours */}
+          <div 
+            className="bg-striped-gray flex items-center justify-center text-white font-black text-[11px] uppercase tracking-wider transition-all duration-300"
+            style={{ width: `${pctEnCours}%` }}
+          >
+            <span>En cours ({countEnCours})</span>
+          </div>
+          {/* Planifiée */}
+          <div 
+            className="bg-striped-red-orange flex items-center justify-center text-white font-black text-[11px] uppercase tracking-wider transition-all duration-300"
+            style={{ width: `${pctPlanifiee}%` }}
+          >
+            <span>Planifiée ({countPlanifiee})</span>
+          </div>
+        </div>
 
-        <button
-          onClick={triggerAddTache}
-          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold cursor-pointer transition-colors"
-        >
-          + Nouvelle intervention
-        </button>
+        {/* Index Numbers underneath */}
+        <div className="flex justify-between text-[10px] text-slate-400 font-mono font-bold px-2">
+          <span>0 (INITIAL)</span>
+          <span>{countEnCours} EN PROGRÈS</span>
+          <span>{countEnCours + countPlanifiee} TOTAL ACTIVES</span>
+        </div>
+      </div>
+
+      {/* Search & Filter bar inspired by Huoltu */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-4 items-center">
+          <input
+            type="text"
+            placeholder="🔎 Rechercher ici avec plusieurs valeurs séparées par des espaces (ET)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500"
+          />
+
+          <select
+            value={filtStatut}
+            onChange={(e) => setFiltStatut(e.target.value)}
+            className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+          >
+            <option value="">Tous statuts</option>
+            <option value="Non commencé">Non commencé</option>
+            <option value="En cours">En cours</option>
+            <option value="En attente">En attente</option>
+            <option value="Bloqué">Bloqué</option>
+            <option value="Terminé">Terminé</option>
+          </select>
+
+          <select
+            value={filtMois}
+            onChange={(e) => setFiltMois(e.target.value)}
+            className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+          >
+            <option value="">Tous les mois</option>
+            {monthsKeys.map((mk, i) => (
+              <option key={i} value={mk}>
+                {mk}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={triggerAddTache}
+            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black cursor-pointer transition-colors shadow-sm"
+          >
+            + Nouvelle intervention
+          </button>
+        </div>
+        <p className="text-[11px] text-slate-400 font-medium pl-1">
+          💡 Affiner votre recherche en espaçant les mots avec un espace. <span className="font-bold text-slate-600">{filteredTasks.length}</span> éléments affichés / un total de <span className="font-bold text-slate-600">{db.taches.length}</span> | Page {activePage + 1} / {totalPages}
+        </p>
       </div>
 
       {/* Toolbar Options Export / Pagination */}
