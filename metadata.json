@@ -1,0 +1,6 @@
+{
+  "name": "GMAO STHIC",
+  "description": "Système de Gestion de Maintenance Assistée par Ordinateur pour le parc de groupes électrogènes, gestion du matériel, magasin et ventes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
