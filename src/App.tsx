@@ -23,9 +23,10 @@ import { VentesTab } from "./components/VentesTab";
 import { BilanTab } from "./components/BilanTab";
 import { GuideTab } from "./components/GuideTab";
 import { DonneesTab } from "./components/DonneesTab";
+import { SuiviMensuelTab } from "./components/SuiviMensuelTab";
 import { LoginView } from "./components/LoginView";
 import { GEModal } from "./components/GEModal";
-import { AuthManager, UserProfile } from "./utils/firebase";
+import { AuthManager, CloudManager, UserProfile } from "./utils/firebase";
 import { calcGE, todayYMD } from "./utils/calculations";
 
 // Lucide icons
@@ -54,7 +55,8 @@ import {
   Settings,
   HelpCircle,
   Search,
-  ChevronRight
+  ChevronRight,
+  RefreshCw
 } from "lucide-react";
 
 // Local storage key
@@ -242,6 +244,7 @@ const buildFactoryDB = (): AppDatabase => {
     ventes: defaultVentes,
     abos: ABOSEED,
     bilans: defaultBilans,
+    rootCauses: [],
     magasinCats: ["Filtres", "Huile", "Courroies", "Batteries", "Électrique / Électronique", "Mécanique", "Autre"],
     magasinUnites: ["Pce", "Litre", "Kg", "Mètre", "Rouleau", "Paquet"]
   };
@@ -255,12 +258,26 @@ export default function App() {
         const parsed = JSON.parse(raw);
         // Ensure sub-arrays exist to prevent crashes
         if (parsed.parc && parsed.inter && parsed.plan && parsed.taches) {
-          // MIGRATION: If local park is much smaller than seed park, merge missing ones
-          if (parsed.parc.length < SEED_PARC.length) {
-            console.log("Synchronisation du parc: ajout des sites manquants...");
-            const existingIds = new Set(parsed.parc.map((g: GE) => g.id));
-            const missing = SEED_PARC.filter(g => !existingIds.has(g.id));
+          let updated = false;
+          // MIGRATION: Sync park by adding missing seed sites
+          const existingIds = new Set(parsed.parc.map((g: GE) => g.id));
+          const missing = SEED_PARC.filter(g => !existingIds.has(g.id));
+          if (missing.length > 0) {
+            console.log(`Synchronisation du parc: ajout de ${missing.length} sites manquants...`);
             parsed.parc = [...parsed.parc, ...missing];
+            updated = true;
+          }
+          
+          // MIGRATION: Sync planning by adding missing seed items
+          const existingPlanKeys = new Set(parsed.plan.map((p: PlanningItem) => `${p.date}|${p.ge || p.site}|${p.note}`));
+          const missingPlan = SEED_PLAN.filter(p => !existingPlanKeys.has(`${p.date}|${p.ge || p.site}|${p.note}`));
+          if (missingPlan.length > 0) {
+            console.log(`Synchronisation du planning: ajout de ${missingPlan.length} éléments manquants...`);
+            parsed.plan = [...parsed.plan, ...missingPlan];
+            updated = true;
+          }
+
+          if (updated) {
             // Also update storage immediately
             localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
           }
@@ -278,6 +295,10 @@ export default function App() {
   const [activeGEId, setActiveGEId] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    // Try to recover last selected month or default to June 2026 for now
+    return localStorage.getItem("sthic_selected_month") || "2026-06";
+  });
 
   // Joste AI Assistant State
   const [ottoOpen, setOttoOpen] = useState<boolean>(false);
@@ -371,6 +392,10 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
   }, [db]);
 
+  useEffect(() => {
+    localStorage.setItem("sthic_selected_month", selectedMonth);
+  }, [selectedMonth]);
+
   // General state mutations
   const handleRestoreDB = (restored: AppDatabase) => {
     setDb(restored);
@@ -388,6 +413,74 @@ export default function App() {
       },
       true
     );
+  };
+
+  const handleSyncCloud = async () => {
+    // Mode Expert : Synchronisation forcée avec le catalogue Excel
+    setDb(prev => {
+      const existingKeys = new Set(prev.parc.map(g => `${g.client}|${g.site}|${g.marque}`.toUpperCase()));
+      const missingFromCatalog: GE[] = [];
+      let nextId = Math.max(...prev.parc.map(g => parseInt(g.id.replace(/\D/g, "") || "0"))) + 1;
+      if (isNaN(nextId) || nextId < 500) nextId = 500;
+
+      for (const key in CONTENTKVA) {
+        if (!existingKeys.has(key.toUpperCase())) {
+          const [client, site, marque] = key.split('|');
+          missingFromCatalog.push({
+            id: `GE${String(nextId++).padStart(3, '0')}`,
+            client: client || "INCONNU",
+            site: site || "SITEPARDEFAUT",
+            marque: marque || "",
+            kva: CONTENTKVA[key],
+            moteur: "PERKINS",
+            regime: 1.0,
+            seuil: 300,
+            type: "Principal",
+            etat: "Opérationnel",
+            comm: "Synchronisé du catalogue Excel"
+          });
+        }
+      }
+
+      const existingPlanKeys = new Set(prev.plan.map(p => `${p.date}|${p.ge || p.site}|${p.note}`));
+      const missingPlan = SEED_PLAN.filter(p => !existingPlanKeys.has(`${p.date}|${p.ge || p.site}|${p.note}`));
+
+      if (missingFromCatalog.length === 0 && missingPlan.length === 0) {
+        alert("📊 Votre base de données est déjà synchronisée avec le catalogue Excel.");
+        return prev;
+      }
+
+      const newDb = {
+        ...prev,
+        parc: [...prev.parc, ...missingFromCatalog],
+        plan: [...prev.plan, ...missingPlan]
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newDb));
+      return newDb;
+    });
+    
+    alert("✅ Synchronisation réussie !\nLes données du catalogue Excel ont été fusionnées.");
+
+    if (!user) return;
+    
+    // Si connecté, on fait aussi la synchro Cloud
+    try {
+      const data = await CloudManager.loadFromCloud(user.uid);
+      if (data) {
+        if (data.parc && data.inter && data.plan && data.taches) {
+          setDb(data);
+          // Update last sync date metadata
+          const nowStr = new Date().toLocaleString("fr-FR");
+          localStorage.setItem(`sthic_last_sync_date_${user.uid}`, nowStr);
+          alert("Base de données synchronisée avec le Cloud !");
+        }
+      } else {
+        alert("Aucune donnée Cloud trouvée.");
+      }
+    } catch (err: any) {
+      console.error("Sync error:", err);
+      alert("Erreur de synchronisation Cloud : " + err.message);
+    }
   };
 
   // 1. Parc GEs handlers
@@ -510,6 +603,7 @@ export default function App() {
               client: g.client,
               site: g.site,
               ge: g.id,
+              type: "Vidange",
               tech: "",
               note: "Projection vidange auto",
               exec: null
@@ -562,6 +656,7 @@ export default function App() {
         client: g.client,
         site: g.site,
         ge: g.id,
+        type: "Préventive",
         tech: "",
         note: freq === "H" ? "Maintenance Hebdomadaire" : "Maintenance Mensuelle",
         exec: null
@@ -605,9 +700,9 @@ export default function App() {
       client: item.client || "",
       site: item.site || "",
       ge: item.ge || "",
-      type: "Préventive",
+      type: (item.type as any) || "Préventive",
       tech: item.tech || "",
-      descp: `Maintenance préventive planifiée le ${item.date}`,
+      descp: `${item.type || 'Maintenance'} planifiée le ${item.date}`,
       descr: "",
       reso: "",
       obs: item.note || "",
@@ -818,6 +913,10 @@ export default function App() {
     });
   };
 
+  const handleAddRootCause = (rc: RootCauseAnalysis) => {
+    setDb(prev => ({ ...prev, rootCauses: [...(prev.rootCauses || []), rc] }));
+  };
+
   const handleAddBilan = (bilan: Bilan) => {
     setDb(prev => ({ ...prev, bilans: [bilan, ...prev.bilans] }));
   };
@@ -839,6 +938,7 @@ export default function App() {
     { id: "planning", label: "Planification", icon: CalendarRange, category: "pilotage" },
     { id: "calendrier", label: "Calendrier", icon: CalendarDays, category: "pilotage" },
     { id: "parc", label: "Parc GEs", icon: Cpu, category: "clients" },
+    { id: "mensuel", label: "Suivi Mensuel", icon: CalendarDays, category: "clients" },
     { id: "sizing", label: "Bilans & Sizing", icon: Calculator, category: "clients" },
     { id: "interventions", label: "Interventions", icon: ClipboardList, category: "chantiers" },
     { id: "rapports", label: "Rapports imprimables", icon: Printer, category: "chantiers" },
@@ -994,22 +1094,41 @@ export default function App() {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         {/* Header toolbar */}
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-50">
+        <header className="h-14 bg-blue-900 border-b border-blue-800 flex items-center justify-between px-6 shrink-0 z-50 text-white">
           <div className="flex items-center gap-4 text-xs font-medium flex-1">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              className="p-2 hover:bg-blue-800 rounded-lg text-blue-200 hover:text-white transition-colors cursor-pointer"
             >
               <Menu size={16} />
             </button>
-            <h1 className="text-sm font-bold text-slate-900 capitalize truncate hidden lg:block min-w-[120px]">
-              {menuItems.find(m => m.id === activeTab)?.label}
-            </h1>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-black tracking-tighter uppercase">GMAO SAISIE — STHIC</span>
+              <span className="h-4 w-[1px] bg-blue-700 mx-1 hidden lg:block" />
+              <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-blue-800 shadow-sm">
+                <CalendarDays size={14} className="text-blue-600" />
+                <select 
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="bg-transparent border-none text-[11px] font-black text-black focus:ring-0 cursor-pointer uppercase outline-none"
+                >
+                  <option value="">Tous les mois</option>
+                  <option value="2026-06">Juin 2026</option>
+                  <option value="2026-07">Juillet 2026</option>
+                  <option value="2026-08">Août 2026</option>
+                  <option value="2026-09">Septembre 2026</option>
+                </select>
+              </div>
+              <span className="h-4 w-[1px] bg-blue-700 mx-1 hidden lg:block" />
+              <h1 className="text-sm font-bold text-blue-100 capitalize truncate hidden lg:block min-w-[120px]">
+                {menuItems.find(m => m.id === activeTab)?.label}
+              </h1>
+            </div>
 
             {/* Global Search Bar */}
             <div className="relative flex-1 max-w-md ml-2 group">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={14} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors" size={14} />
                 <input
                   type="text"
                   placeholder="Recherche rapide GE, Site ou Client..."
@@ -1019,7 +1138,7 @@ export default function App() {
                     setShowSearchResults(true);
                   }}
                   onFocus={() => setShowSearchResults(true)}
-                  className="w-full bg-slate-100 border-transparent focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 rounded-xl py-2 pl-9 pr-4 text-xs font-semibold transition-all outline-none"
+                  className="w-full bg-white border-transparent focus:ring-4 focus:ring-blue-400/20 rounded-xl py-2 pl-9 pr-4 text-xs font-semibold text-black placeholder-slate-400 transition-all outline-none shadow-sm"
                 />
                 {globalSearch && (
                   <button 
@@ -1099,43 +1218,24 @@ export default function App() {
             </div>
           </div>
 
-          {/* Quick status counters & Joste AI Assistant Button */}
-          <div className="flex items-center gap-3 text-xs font-semibold">
-            {/* Joste AI trigger */}
+          {/* Quick status counters & Synchronize button */}
+          <div className="flex items-center gap-3 text-xs font-bold">
+            {/* Sync button */}
             <button
-              onClick={() => setOttoOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-50 text-blue-600 border border-blue-200 rounded-xl transition-all cursor-pointer shadow-2xs font-sans font-bold"
+              onClick={handleSyncCloud}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-100 text-black border border-slate-200 rounded-lg transition-all cursor-pointer shadow-sm"
             >
-              <Sparkles size={13} className="text-blue-500 animate-pulse" />
-              <span>Demandez à Joste !</span>
-              <span className="bg-red-500 text-white text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ml-1">
-                26
-              </span>
+              <RefreshCw size={13} className="text-blue-600" />
+              <span>Synchroniser</span>
             </button>
 
-            {/* Help & Settings indicators */}
+            {/* Logout button */}
             <button
-              onClick={() => setOttoOpen(true)}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg cursor-pointer hidden sm:block"
-              title="Aide et diagnostic"
+              onClick={() => AuthManager.logout()}
+              className="px-3 py-1.5 bg-slate-100/10 hover:bg-white hover:text-black text-white border border-white/20 rounded-lg transition-all cursor-pointer"
             >
-              <HelpCircle size={16} />
+              Déconnexion
             </button>
-            <button
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg cursor-pointer hidden sm:block"
-              title="Configuration"
-            >
-              <Settings size={16} />
-            </button>
-
-            {/* Profile Avatar */}
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-              <img
-                src={user?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.displayName || "User")}`}
-                alt="Profile"
-                className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200"
-              />
-            </div>
           </div>
         </header>
 
@@ -1144,15 +1244,18 @@ export default function App() {
           {activeTab === "dashboard" && (
             <DashboardTab
               db={db}
+              selectedMonth={selectedMonth}
               onSelectGE={(geId) => {
                 setActiveGEId(geId);
               }}
+              onAddRootCause={handleAddRootCause}
             />
           )}
 
           {activeTab === "planning" && (
             <PlanningTab
               db={db}
+              selectedMonth={selectedMonth}
               onAddPlanItem={handleAddPlan}
               onUpdatePlanItem={handleUpdatePlan}
               onDeletePlanItem={handleDeletePlan}
@@ -1171,6 +1274,7 @@ export default function App() {
           {activeTab === "calendrier" && (
             <CalendrierTab
               db={db}
+              selectedMonth={selectedMonth}
             />
           )}
 
@@ -1198,6 +1302,7 @@ export default function App() {
           {activeTab === "interventions" && (
             <InterventionsTab
               db={db}
+              selectedMonth={selectedMonth}
               onAddInter={handleAddInter}
               onUpdateInter={handleUpdateInter}
               onDeleteInter={handleDeleteInter}
@@ -1210,6 +1315,11 @@ export default function App() {
           {activeTab === "rapports" && (
             <RapportsTab
               db={db}
+              selectedMonth={selectedMonth}
+              onSelectGE={(geId) => {
+                setActiveGEId(geId);
+                setActiveTab("parc");
+              }}
             />
           )}
 
@@ -1252,6 +1362,22 @@ export default function App() {
               user={user}
               onRestoreDB={handleRestoreDB}
               onResetDB={handleResetDB}
+            />
+          )}
+
+          {activeTab === "mensuel" && (
+            <SuiviMensuelTab
+              db={db}
+              selectedMonth={selectedMonth}
+              onUpdateGE={(id, updated) => {
+                setDb(prev => {
+                  const newParc = prev.parc.map(g => g.id === id ? { ...g, ...updated } : g);
+                  return { ...prev, parc: newParc };
+                });
+              }}
+              onAddIntervention={(inter) => {
+                setDb(prev => ({ ...prev, inter: [inter, ...prev.inter] }));
+              }}
             />
           )}
         </main>

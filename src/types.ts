@@ -53,6 +53,7 @@ export interface PlanningItem {
   client: string;
   site: string;
   ge: string;
+  type?: string; // 'Préventive' | 'Corrective' | 'Vidange' | 'Curative' | 'Autre'
   tech: string;
   note: string;
   exec: string | null;
@@ -244,6 +245,16 @@ export interface CartItem {
   maxStock: number;
 }
 
+export interface RootCauseAnalysis {
+  id: string;
+  date: string;
+  geId: string;
+  anomaly: string;
+  whys: string[];
+  action: string;
+  _id?: string;
+}
+
 export interface AppDatabase {
   parc: GE[];
   inter: Intervention[];
@@ -256,6 +267,7 @@ export interface AppDatabase {
   ventes: Vente[];
   abos: Abonnement[];
   bilans: Bilan[];
+  rootCauses: RootCauseAnalysis[];
   magasinCats: string[];
   magasinUnites: string[];
 }

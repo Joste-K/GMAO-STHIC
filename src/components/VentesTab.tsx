@@ -98,12 +98,12 @@ export const VentesTab: React.FC<Props> = ({ db, onAddVente, onUpdateVente, onDe
           placeholder="🔎 Rechercher un dossier facturation (facture, client, type)…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none"
+          className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none"
         />
         <select
           value={filtStatut}
           onChange={(e) => setFiltStatut(e.target.value)}
-          className="px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none"
+          className="px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none"
         >
           <option value="">Tous statuts</option>
           {STATUTS.map((st, i) => (

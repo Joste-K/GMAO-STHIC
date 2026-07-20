@@ -174,12 +174,12 @@ export const StockTab: React.FC<Props> = ({
               placeholder="🔎 Rechercher un matériel (code, désignation, client)…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:border-blue-500"
+              className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 rounded-lg text-xs text-black bg-white focus:outline-none focus:border-blue-500"
             />
             <select
               value={filtDispo}
               onChange={(e) => setFiltDispo(e.target.value)}
-              className="px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none"
+              className="px-2.5 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none"
             >
               <option value="">Disponibilité : toutes</option>
               {DISPOS.map((d, i) => (

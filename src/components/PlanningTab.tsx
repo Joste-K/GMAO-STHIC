@@ -5,6 +5,7 @@ import { calcPlan, fmt, today, todayYMD, pd } from "../utils/calculations";
 
 interface Props {
   db: AppDatabase;
+  selectedMonth: string;
   onUpdatePlanItem: (idx: number, updated: Partial<PlanningItem>) => void;
   onAddPlanItem: (item: PlanningItem) => void;
   onProjeterVidanges: (month: string) => void;
@@ -20,6 +21,7 @@ interface Props {
 
 export const PlanningTab: React.FC<Props> = ({
   db,
+  selectedMonth,
   onUpdatePlanItem,
   onAddPlanItem,
   onProjeterVidanges,
@@ -33,6 +35,7 @@ export const PlanningTab: React.FC<Props> = ({
   onStartIntervention
 }) => {
   const [search, setSearch] = useState("");
+  const [filtType, setFiltType] = useState("");
   const [filtTech, setFiltTech] = useState("");
   const [filtStatut, setFiltStatut] = useState("");
   const [filtFrom, setFiltFrom] = useState("");
@@ -46,6 +49,7 @@ export const PlanningTab: React.FC<Props> = ({
   // New Plan form state
   const [newPlanDate, setNewPlanDate] = useState(todayYMD());
   const [newPlanGe, setNewPlanGe] = useState("");
+  const [newPlanType, setNewPlanType] = useState("Préventive");
   const [newPlanClient, setNewPlanClient] = useState("");
   const [newPlanSite, setNewPlanSite] = useState("");
   const [newPlanMarque, setNewPlanMarque] = useState("");
@@ -66,7 +70,11 @@ export const PlanningTab: React.FC<Props> = ({
   const [genSite, setGenSite] = useState("");
   const [genFreq, setGenFreq] = useState("1"); // 1 = Once, H = Weekly
   const [genDay, setGenDay] = useState("vendredi");
-  const [genMonth, setGenMonth] = useState(todayYMD().slice(0, 7));
+  const [genMonth, setGenMonth] = useState(selectedMonth || todayYMD().slice(0, 7));
+
+  React.useEffect(() => {
+    if (selectedMonth) setGenMonth(selectedMonth);
+  }, [selectedMonth]);
 
   // Tech list
   const techList = Array.from(new Set(db.plan.map(p => p.tech).filter(Boolean))).sort();
@@ -80,16 +88,18 @@ export const PlanningTab: React.FC<Props> = ({
       const stateArr = g.etat === "Arrêt contrat de maintenance";
       const itemStatus = stateArr ? "arret" : cPlan.k;
 
-      const matchesSearch = ((p.client || "") + " " + (p.site || "") + " " + (p.tech || "") + " " + (p.ge || ""))
+      const matchesSearch = ((p.client || "") + " " + (p.site || "") + " " + (p.tech || "") + " " + (p.ge || "") + " " + (p.type || ""))
         .toLowerCase()
         .includes(search.toLowerCase());
 
+      const matchesType = !filtType || p.type === filtType;
       const matchesTech = !filtTech || p.tech === filtTech;
       const matchesStatut = !filtStatut || itemStatus === filtStatut;
       const matchesFrom = !filtFrom || (p.date && p.date >= filtFrom);
       const matchesTo = !filtTo || (p.date && p.date <= filtTo);
+      const matchesMonth = !selectedMonth || (p.date && p.date.startsWith(selectedMonth));
 
-      return matchesSearch && matchesTech && matchesStatut && matchesFrom && matchesTo;
+      return matchesSearch && matchesType && matchesTech && matchesStatut && matchesFrom && matchesTo && matchesMonth;
     });
 
   // Sort: date asc
@@ -238,6 +248,7 @@ export const PlanningTab: React.FC<Props> = ({
     onAddPlanItem({
       date: newPlanDate,
       ge: newPlanGe,
+      type: newPlanType,
       client: newPlanClient,
       site: newPlanSite,
       marque: newPlanMarque,
@@ -284,21 +295,69 @@ export const PlanningTab: React.FC<Props> = ({
     setShowGenMaintModal(false);
   };
 
+  // Expert stats
+  const stats = {
+    total: filteredPlan.length,
+    retard: filteredPlan.filter(({ p }) => calcPlan(p, today()).k === "retard").length,
+    prevu: filteredPlan.filter(({ p }) => calcPlan(p, today()).k === "prevu").length,
+    fait: filteredPlan.filter(({ p }) => calcPlan(p, today()).k === "fait").length,
+  };
+
   return (
     <div id="plan" className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-black tracking-tight">PLANNING DE MAINTENANCE</h2>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Gestion prévisionnelle et suivi des interventions</p>
+        </div>
+      </div>
+
+      {/* KPI Expert Header */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-slate-900">
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total Planifié</span>
+          <span className="text-2xl font-black text-black">{stats.total}</span>
+        </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-red-600">
+          <span className="text-[10px] font-black text-red-600 uppercase tracking-widest">En Retard</span>
+          <span className="text-2xl font-black text-red-600">{stats.retard}</span>
+        </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-blue-600">
+          <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">À Venir</span>
+          <span className="text-2xl font-black text-blue-600">{stats.prevu}</span>
+        </div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-center border-l-4 border-l-green-600">
+          <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">Exécutés</span>
+          <span className="text-2xl font-black text-green-600">{stats.fait}</span>
+        </div>
+      </div>
+
       {/* Search and Filters */}
-      <div className="flex flex-wrap gap-4 items-center">
+      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-3">
         <input
           type="text"
           placeholder="🔎 Planning par client, site, technicien, GE…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500"
+          className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black focus:outline-none focus:border-blue-500"
         />
+        <select
+          value={filtType}
+          onChange={(e) => setFiltType(e.target.value)}
+          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black font-semibold focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
+        >
+          <option value="">Tous les types</option>
+          <option value="Préventive">🛡️ Préventive</option>
+          <option value="Corrective">🛠️ Corrective</option>
+          <option value="Vidange">🛢️ Vidange</option>
+          <option value="Curative">🚑 Curative</option>
+          <option value="Expertise">🔬 Expertise</option>
+          <option value="Autre">📝 Autre</option>
+        </select>
         <select
           value={filtTech}
           onChange={(e) => setFiltTech(e.target.value)}
-          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black font-semibold focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
         >
           <option value="">Tous techniciens</option>
           {techList.map((t, i) => (
@@ -308,7 +367,7 @@ export const PlanningTab: React.FC<Props> = ({
         <select
           value={filtStatut}
           onChange={(e) => setFiltStatut(e.target.value)}
-          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black font-semibold focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
         >
           <option value="">Tous statuts</option>
           <option value="fait">✅ Exécuté</option>
@@ -324,14 +383,14 @@ export const PlanningTab: React.FC<Props> = ({
             type="date"
             value={filtFrom}
             onChange={(e) => setFiltFrom(e.target.value)}
-            className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-blue-500"
+            className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg text-black focus:outline-none focus:border-blue-500"
           />
           <span>au</span>
           <input
             type="date"
             value={filtTo}
             onChange={(e) => setFiltTo(e.target.value)}
-            className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-blue-500"
+            className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg text-black focus:outline-none focus:border-blue-500"
           />
         </div>
         <button
@@ -408,16 +467,16 @@ export const PlanningTab: React.FC<Props> = ({
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
             <thead>
-              <tr className="bg-slate-700 text-white">
-                <th className="px-4 py-3 text-left font-semibold">Date planifiée</th>
-                <th className="px-4 py-3 text-left font-semibold">Client / Site</th>
-                <th className="px-4 py-3 text-left font-semibold hide-sm">Marque</th>
-                <th className="px-4 py-3 text-left font-semibold">Puissance</th>
-                <th className="px-4 py-3 text-left font-semibold">Technicien</th>
-                <th className="px-4 py-3 text-left font-semibold">Date exécutée</th>
-                <th className="px-4 py-3 text-left font-semibold">Statut</th>
-                <th className="px-4 py-3 text-left font-semibold">Commentaire / Note</th>
-                <th className="px-4 py-3 text-center font-semibold">⚠️ Anomalie</th>
+              <tr className="bg-slate-800 text-white border-b-2 border-slate-900">
+                <th className="px-4 py-4 text-left font-bold text-[11px] uppercase tracking-wider">Date planifiée</th>
+                <th className="px-4 py-4 text-left font-bold text-[11px] uppercase tracking-wider">Type / GE</th>
+                <th className="px-4 py-4 text-left font-bold text-[11px] uppercase tracking-wider">Client / Site</th>
+                <th className="px-4 py-4 text-left font-bold text-[11px] uppercase tracking-wider hide-sm">Marque</th>
+                <th className="px-4 py-4 text-left font-bold text-[11px] uppercase tracking-wider">Puissance</th>
+                <th className="px-4 py-4 text-left font-bold text-[11px] uppercase tracking-wider">Technicien</th>
+                <th className="px-4 py-4 text-left font-bold text-[11px] uppercase tracking-wider">Exécution</th>
+                <th className="px-4 py-4 text-left font-bold text-[11px] uppercase tracking-wider">Statut</th>
+                <th className="px-4 py-4 text-center font-bold text-[11px] uppercase tracking-wider">Note / Anomalie</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -427,50 +486,88 @@ export const PlanningTab: React.FC<Props> = ({
                   const isArr = g.etat === "Arrêt contrat de maintenance";
                   const cPlan = calcPlan(p, today());
                   const dispStatut = isArr ? "⏸️ Arrêt contrat" : cPlan.s;
-                  const dispColorClass = isArr ? "bg-slate-100 text-slate-500" : (cPlan.k === "fait" || cPlan.k === "avance" ? "bg-green-100 text-green-700" : (cPlan.k === "retard" || cPlan.k === "retard_fait" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"));
+                  
+                  // Expert status colors
+                  let dispColorClass = "bg-slate-100 text-slate-700";
+                  if (isArr) dispColorClass = "bg-slate-200 text-slate-500 italic";
+                  else if (cPlan.k === "fait") dispColorClass = "bg-green-700 text-white shadow-sm ring-1 ring-green-800";
+                  else if (cPlan.k === "avance") dispColorClass = "bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-700";
+                  else if (cPlan.k === "retard_fait") dispColorClass = "bg-orange-600 text-white shadow-sm ring-1 ring-orange-700";
+                  else if (cPlan.k === "retard") dispColorClass = "bg-red-700 text-white shadow-sm animate-pulse ring-2 ring-red-300";
+                  else if (cPlan.k === "prevu") dispColorClass = "bg-blue-50 text-blue-900 border-2 border-blue-200 font-black";
+
+                  // Type colors
+                  const getTypeStyle = (t?: string) => {
+                    switch (t) {
+                      case 'Préventive': return 'bg-blue-600 text-white border-blue-700';
+                      case 'Corrective': return 'bg-amber-500 text-white border-amber-600';
+                      case 'Vidange': return 'bg-slate-800 text-white border-slate-900';
+                      case 'Curative': return 'bg-red-600 text-white border-red-700';
+                      case 'Expertise': return 'bg-purple-600 text-white border-purple-700';
+                      default: return 'bg-slate-200 text-slate-800 border-slate-300';
+                    }
+                  };
 
                   const handleCellChange = (field: keyof PlanningItem, val: any) => {
                     onUpdatePlanItem(idx, { [field]: val });
                   };
 
                   return (
-                    <tr key={idx} className={`hover:bg-slate-50/50 ${isArr ? "opacity-50" : ""}`}>
+                    <tr key={idx} className={`hover:bg-blue-50/30 transition-colors ${isArr ? "opacity-60 grayscale-[0.5]" : ""}`}>
                       <td className="px-4 py-3">
                         <input
                           type="date"
                           value={p.date || ""}
                           onChange={(e) => handleCellChange("date", e.target.value || null)}
-                          className="px-1.5 py-1 border border-slate-200 rounded-md text-xs bg-white focus:outline-none focus:border-blue-500"
+                          className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-black bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                         />
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-semibold block text-slate-800">{p.client}</span>
-                        <span className="text-xs text-slate-400 font-medium">{p.site}</span>
-                        {p.ge && <span className="text-[10px] text-blue-800 font-bold block mt-0.5">GE: {p.ge}</span>}
+                        <div className="flex flex-col gap-1">
+                          <select
+                            value={p.type || "Préventive"}
+                            onChange={(e) => handleCellChange("type", e.target.value)}
+                            className={`px-2 py-1 rounded text-[10px] font-black uppercase border focus:outline-none ${getTypeStyle(p.type)}`}
+                          >
+                            <option>Préventive</option>
+                            <option>Corrective</option>
+                            <option>Vidange</option>
+                            <option>Curative</option>
+                            <option>Expertise</option>
+                            <option>Autre</option>
+                          </select>
+                          <span className="text-[10px] font-black text-slate-900 bg-slate-100 px-2 py-0.5 rounded-sm w-fit">ID: {p.ge || "N/A"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-black block text-black text-sm uppercase leading-tight">{p.client}</span>
+                        <span className="text-[11px] text-slate-900 font-black uppercase opacity-80">{p.site}</span>
                       </td>
                       <td className="px-4 py-3 hide-sm">
                         <input
                           type="text"
                           value={p.marque || g.marque || ""}
                           onChange={(e) => handleCellChange("marque", e.target.value)}
-                          className="w-24 px-1.5 py-1 border border-slate-200 rounded-md text-xs bg-white focus:outline-none"
+                          className="w-24 px-2 py-1 border border-slate-200 rounded-lg text-xs font-semibold text-black bg-white focus:outline-none"
                         />
                       </td>
-                      <td className="px-4 py-3 font-semibold text-slate-700">
-                        <input
-                          type="number"
-                          value={p.kva || g.kva || ""}
-                          onChange={(e) => handleCellChange("kva", e.target.value === "" ? "" : Number(e.target.value))}
-                          className="w-16 px-1.5 py-1 border border-slate-200 rounded-md text-xs bg-white text-center focus:outline-none"
-                        />{" "}
-                        kVA
+                      <td className="px-4 py-3 font-black text-slate-900">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={p.kva || g.kva || ""}
+                            onChange={(e) => handleCellChange("kva", e.target.value === "" ? "" : Number(e.target.value))}
+                            className="w-16 px-2 py-1 border border-slate-200 rounded-lg text-xs font-black text-black bg-white text-center focus:outline-none"
+                          />
+                          <span className="text-[10px]">kVA</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <input
                           type="text"
                           value={p.tech || ""}
                           onChange={(e) => handleCellChange("tech", e.target.value)}
-                          className="w-28 px-1.5 py-1 border border-slate-200 rounded-md text-xs bg-white focus:outline-none"
+                          className="w-32 px-2 py-1 border border-slate-200 rounded-lg text-xs font-bold text-black bg-white focus:outline-none"
                         />
                       </td>
                       <td className="px-4 py-3">
@@ -478,18 +575,18 @@ export const PlanningTab: React.FC<Props> = ({
                           type="date"
                           value={p.exec || ""}
                           onChange={(e) => handleCellChange("exec", e.target.value || null)}
-                          className="px-1.5 py-1 border border-slate-200 rounded-md text-xs bg-white focus:outline-none focus:border-blue-500"
+                          className="px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-black bg-white focus:outline-none"
                         />
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${dispColorClass}`}>
+                          <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight text-center min-w-[100px] ${dispColorClass}`}>
                             {dispStatut}
                           </span>
                           {!p.exec && onStartIntervention && (
                             <button
                               onClick={() => onStartIntervention(p, idx)}
-                              className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg cursor-pointer transition-colors"
+                              className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full cursor-pointer transition-all hover:scale-110 shadow-md"
                               title="Démarrer l'intervention réelle"
                             >
                               🚀
@@ -498,26 +595,26 @@ export const PlanningTab: React.FC<Props> = ({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={p.note || ""}
-                          onChange={(e) => handleCellChange("note", e.target.value)}
-                          className="w-32 px-1.5 py-1 border border-slate-200 rounded-md text-xs bg-white focus:outline-none"
-                          placeholder="Note…"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => {
-                            setAnoGe(p.ge || "");
-                            setAnoSite(p.site || "");
-                            setShowAnoModal(true);
-                          }}
-                          className="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-bold cursor-pointer"
-                          title="Relever une anomalie"
-                        >
-                          ⚠️
-                        </button>
+                        <div className="flex items-center gap-2 justify-center">
+                          <input
+                            type="text"
+                            value={p.note || ""}
+                            onChange={(e) => handleCellChange("note", e.target.value)}
+                            className="flex-1 min-w-[100px] px-2 py-1 border border-slate-200 rounded-lg text-xs font-bold text-black bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="Note…"
+                          />
+                          <button
+                            onClick={() => {
+                              setAnoGe(p.ge || "");
+                              setAnoSite(p.site || "");
+                              setShowAnoModal(true);
+                            }}
+                            className="p-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-black cursor-pointer transition-transform hover:rotate-12 shadow-sm"
+                            title="Relever une anomalie"
+                          >
+                            ⚠️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -559,8 +656,10 @@ export const PlanningTab: React.FC<Props> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {db.anomalies.length > 0 ? (
-                db.anomalies.map((ano, idx) => {
+              {db.anomalies.filter(ano => !selectedMonth || (ano.date && ano.date.startsWith(selectedMonth))).length > 0 ? (
+                db.anomalies
+                  .filter(ano => !selectedMonth || (ano.date && ano.date.startsWith(selectedMonth)))
+                  .map((ano, idx) => {
                   const getAnoStyle = (s: string) => {
                     if (s === "Résolu") return "bg-green-100 text-green-700";
                     if (s === "En cours") return "bg-amber-100 text-amber-700";
@@ -631,6 +730,17 @@ export const PlanningTab: React.FC<Props> = ({
                 <div className="flex flex-col space-y-1">
                   <label className="text-xs font-bold text-slate-600 uppercase">Date planifiée *</label>
                   <input type="date" value={newPlanDate} onChange={(e) => setNewPlanDate(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white" />
+                </div>
+                <div className="flex flex-col space-y-1">
+                  <label className="text-xs font-bold text-slate-600 uppercase">Type d'intervention *</label>
+                  <select value={newPlanType} onChange={(e) => setNewPlanType(e.target.value)} className="px-3 py-2 border rounded-lg text-sm bg-white font-bold text-black">
+                    <option>Préventive</option>
+                    <option>Corrective</option>
+                    <option>Vidange</option>
+                    <option>Curative</option>
+                    <option>Expertise</option>
+                    <option>Autre</option>
+                  </select>
                 </div>
                 <div className="flex flex-col space-y-1">
                   <label className="text-xs font-bold text-slate-600 uppercase">Choisir GE</label>

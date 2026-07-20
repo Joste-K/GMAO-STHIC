@@ -4,12 +4,21 @@ import { calcGE, calcPlan, pd, today, fmt } from "../utils/calculations";
 
 interface Props {
   db: AppDatabase;
+  selectedMonth: string;
 }
 
-export const CalendrierTab: React.FC<Props> = ({ db }) => {
+export const CalendrierTab: React.FC<Props> = ({ db, selectedMonth }) => {
   const [currentYear, setCurrentYear] = useState(() => today().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(() => today().getMonth()); // 0-11
   const [selectedDayISO, setSelectedDayISO] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (selectedMonth) {
+      const [y, m] = selectedMonth.split("-").map(Number);
+      setCurrentYear(y);
+      setCurrentMonth(m - 1);
+    }
+  }, [selectedMonth]);
 
   const monthsList = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
@@ -53,6 +62,7 @@ export const CalendrierTab: React.FC<Props> = ({ db }) => {
     if (p.date) {
       addEvent(p.date, {
         t: "v",
+        type: p.type || "Préventive",
         ge: p.ge,
         client: p.client,
         site: p.site,
@@ -138,29 +148,34 @@ export const CalendrierTab: React.FC<Props> = ({ db }) => {
           {d}
         </span>
         <div className="space-y-1 mt-1">
-          {items.slice(0, 2).map((it, idx) => {
-            let col = "bg-blue-50 text-blue-700";
-            let sym = "📋";
-            if (it.t === "d") {
-              col = "bg-amber-50 text-amber-700 border-l-2 border-l-amber-500";
+          {items.slice(0, 3).map((it, idx) => {
+            let col = "bg-blue-50 text-blue-700 border-l-2 border-blue-400";
+            let sym = "🛡️";
+            if (it.t === "v") {
+              if (it.type === "Vidange") { col = "bg-slate-100 text-slate-800 border-l-2 border-slate-500"; sym = "🛢️"; }
+              else if (it.type === "Corrective") { col = "bg-amber-50 text-amber-700 border-l-2 border-amber-500"; sym = "🛠️"; }
+              else if (it.type === "Curative") { col = "bg-red-50 text-red-700 border-l-2 border-red-500"; sym = "🚑"; }
+              else if (it.type === "Expertise") { col = "bg-purple-50 text-purple-700 border-l-2 border-purple-500"; sym = "🔬"; }
+            } else if (it.t === "d") {
+              col = "bg-amber-50 text-amber-700 border-l-2 border-amber-500";
               sym = "⚙️";
             } else if (it.t === "a") {
-              col = "bg-red-50 text-red-700 border-l-2 border-l-red-500";
+              col = "bg-red-50 text-red-700 border-l-2 border-red-500";
               sym = "⚠️";
             }
             return (
               <div
                 key={idx}
-                className={`text-[9px] font-bold px-1 py-0.5 rounded truncate max-w-full ${col}`}
-                title={it.client || it.ge}
+                className={`text-[8px] font-black px-1 py-0.5 rounded-sm truncate max-w-full uppercase ${col}`}
+                title={`${it.client || it.ge} - ${it.type || ''}`}
               >
                 {sym} {it.client || it.ge}
               </div>
             );
           })}
-          {items.length > 2 && (
-            <div className="text-[9px] font-extrabold text-blue-600 pl-1">
-              +{items.length - 2} autre{items.length - 2 > 1 ? "s" : ""}
+          {items.length > 3 && (
+            <div className="text-[8px] font-black text-blue-600 pl-1">
+              +{items.length - 3} PLUS
             </div>
           )}
         </div>
@@ -248,7 +263,15 @@ export const CalendrierTab: React.FC<Props> = ({ db }) => {
                   let badgeText = "📋 Visite";
                   let badgeCol = "bg-blue-100 text-blue-800";
                   let det = `Tech: ${it.tech || "Non assigné"}`;
-                  if (it.t === "d") {
+                  
+                  if (it.t === "v") {
+                    badgeText = `${it.type || "Visite"}`;
+                    if (it.type === "Vidange") badgeCol = "bg-slate-200 text-slate-800";
+                    else if (it.type === "Corrective") badgeCol = "bg-amber-100 text-amber-800";
+                    else if (it.type === "Curative") badgeCol = "bg-red-100 text-red-800";
+                    else if (it.type === "Expertise") badgeCol = "bg-purple-100 text-purple-800";
+                    else badgeCol = "bg-blue-100 text-blue-800";
+                  } else if (it.t === "d") {
                     badgeText = "🔧 Vidange";
                     badgeCol = "bg-amber-100 text-amber-800";
                     det = it.sv || "Vidange périodique requise";

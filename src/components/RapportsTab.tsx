@@ -4,12 +4,13 @@ import { calcGE, recoGE, fmt, todayYMD, pd } from "../utils/calculations";
 
 interface Props {
   db: AppDatabase;
+  selectedMonth: string;
   onSelectGE: (geId: string) => void;
 }
 
-export const RapportsTab: React.FC<Props> = ({ db, onSelectGE }) => {
+export const RapportsTab: React.FC<Props> = ({ db, selectedMonth, onSelectGE }) => {
   const [scope, setScope] = useState("__ALL__");
-  const [month, setMonth] = useState("");
+  const [month, setMonth] = useState(selectedMonth || "");
   const [generated, setGenerated] = useState(false);
 
   // Clients
@@ -65,7 +66,7 @@ export const RapportsTab: React.FC<Props> = ({ db, onSelectGE }) => {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `rapport_${isG ? "GLOBAL" : scope.replace(/[^A-Za-z0-9]/g, "_")}_${todayYMD()}.csv`;
+    link.download = `rapport_${isG ? "GLOBAL" : scope.replace(/[^A-Za-z0-9]/g, "_")}_${month || todayYMD()}.csv`;
     link.click();
   };
 

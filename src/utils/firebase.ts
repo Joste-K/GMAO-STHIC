@@ -15,12 +15,12 @@ import { getFirestore, doc, setDoc, getDoc, Firestore } from "firebase/firestore
 
 // User-provided Firebase credentials & potential env variables fallback
 const fallbackConfig = {
-  apiKey: "AIzaSyCD8pt0xE3WaWate8A0sXukOIZ7lolfl30",
-  authDomain: "gmao-sthic.firebaseapp.com",
-  projectId: "gmao-sthic",
-  storageBucket: "gmao-sthic.firebasestorage.app",
-  messagingSenderId: "61792499399",
-  appId: "1:61792499399:web:b7860dd25d486525a070e2"
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
 };
 
 const firebaseConfig = {
@@ -96,7 +96,8 @@ const getSimulatedUsers = (): Record<string, { email: string; password?: string;
   try {
     const raw = localStorage.getItem(SIMULATED_USERS_KEY);
     return raw ? JSON.parse(raw) : {
-      "admin@sthic.cg": { email: "admin@sthic.cg", password: "password", name: "Superviseur STHIC" }
+      "admin@sthic.cg": { email: "admin@sthic.cg", password: "password", name: "Superviseur STHIC" },
+      "kodiajoste@gmail.com": { email: "kodiajoste@gmail.com", password: "password", name: "Joste KODIA" }
     };
   } catch {
     return {};
@@ -278,44 +279,28 @@ export const AuthManager = {
           isSimulated: false
         };
       } catch (err: any) {
-        console.error("Google login popup failed/blocked.", err);
-        const code = err?.code || "";
-        const message = err?.message || "";
-        if (code === "auth/unauthorized-domain" || message.includes("unauthorized-domain")) {
-          throw new Error(`[ERR_UNAUTHORIZED_DOMAIN]`);
+        console.error("Google login failed:", err);
+        // Special case for unauthorized domains
+        if (err.code === "auth/unauthorized-domain") {
+          throw new Error("[ERR_UNAUTHORIZED_DOMAIN]");
         }
-        throw new Error(err.message || "Le pop-up de connexion Google a été bloqué ou fermé.");
+        throw err;
       }
-    } else {
-      // High fidelity simulation of Gmail auth inside preview
-      // Prompt for a mock gmail account or pick a pre-selected one
-      const promptEmail = prompt(
-        "Simulation de connexion Google Gmail\nVeuillez saisir votre adresse e-mail Google :",
-        "technicien@gmail.com"
-      );
-
-      if (promptEmail === null) {
-        throw new Error("Connexion Google annulée.");
-      }
-
-      const cleanEmail = promptEmail.trim().toLowerCase();
-      if (!cleanEmail.includes("@")) {
-        throw new Error("Adresse e-mail invalide.");
-      }
-
-      const defaultName = cleanEmail.split("@")[0].toUpperCase().replace(".", " ");
-      const mockUser: UserProfile = {
-        uid: `google-sim-${Math.floor(Math.random() * 100000)}`,
-        email: cleanEmail,
-        displayName: defaultName,
-        photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(defaultName)}`,
-        isSimulated: true
-      };
-
-      localStorage.setItem(SIMULATED_ACTIVE_USER_KEY, JSON.stringify(mockUser));
-      notifySimulatedListeners();
-      return mockUser;
     }
+
+    // High fidelity simulation - Use current user email if available or default
+    const defaultEmail = "kodiajoste@gmail.com";
+    const mockUser: UserProfile = {
+      uid: `google-sim-${Math.floor(Math.random() * 100000)}`,
+      email: defaultEmail,
+      displayName: "JOSTE KODIA",
+      photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=JK`,
+      isSimulated: true
+    };
+
+    localStorage.setItem(SIMULATED_ACTIVE_USER_KEY, JSON.stringify(mockUser));
+    notifySimulatedListeners();
+    return mockUser;
   },
 
   /**

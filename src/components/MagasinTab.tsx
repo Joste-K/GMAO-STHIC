@@ -141,7 +141,7 @@ export const MagasinTab: React.FC<Props> = ({
               placeholder="🔎 Rechercher un article (ref, désignation, emplacement)…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none"
+              className="flex-1 min-w-[200px] px-3 py-2 border border-slate-200 rounded-lg text-xs text-black bg-white focus:outline-none"
             />
             <button
               onClick={() => setFiltLowStock(!filtLowStock)}

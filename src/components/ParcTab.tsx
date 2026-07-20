@@ -85,7 +85,7 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
           placeholder="🔎 Rechercher un GE par client, site, ID, moteur…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500"
+          className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black focus:outline-none focus:border-blue-500"
         />
         <button
           onClick={onOpenNewGE}
@@ -100,7 +100,7 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
         <select
           value={filtClient}
           onChange={(e) => setFiltClient(e.target.value)}
-          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none focus:border-blue-500"
+          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none focus:border-blue-500"
         >
           <option value="">Tous clients</option>
           {clients.map((c, i) => (
@@ -113,7 +113,7 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
         <select
           value={filtMarque}
           onChange={(e) => setFiltMarque(e.target.value)}
-          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none focus:border-blue-500"
+          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none focus:border-blue-500"
         >
           <option value="">Toutes marques</option>
           {brands.map((b, i) => (
@@ -126,7 +126,7 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
         <select
           value={filtEtat}
           onChange={(e) => setFiltEtat(e.target.value)}
-          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none focus:border-blue-500"
+          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none focus:border-blue-500"
         >
           <option value="">Tous états</option>
           <option value="Opérationnel">Opérationnel</option>
@@ -139,7 +139,7 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
         <select
           value={filtVidange}
           onChange={(e) => setFiltVidange(e.target.value)}
-          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none focus:border-blue-500"
+          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none focus:border-blue-500"
         >
           <option value="">🛢️ À vidanger : tous</option>
           <option value="🔴">🔴 À vidanger</option>
@@ -151,7 +151,7 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
         <select
           value={filtBatt}
           onChange={(e) => setFiltBatt(e.target.value)}
-          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none focus:border-blue-500"
+          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none focus:border-blue-500"
         >
           <option value="">Batterie : tous</option>
           <option value="🔴">🔴 À remplacer</option>
@@ -162,7 +162,7 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
         <select
           value={filtCourr}
           onChange={(e) => setFiltCourr(e.target.value)}
-          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none focus:border-blue-500"
+          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none focus:border-blue-500"
         >
           <option value="">Courroie : tous</option>
           <option value="🔴">🔴 À remplacer</option>
@@ -175,7 +175,7 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
           placeholder="kVA min"
           value={filtPuiss}
           onChange={(e) => setFiltPuiss(e.target.value ? Number(e.target.value) : "")}
-          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none focus:border-blue-500"
+          className="px-2 py-2 border border-slate-200 bg-white rounded-lg text-xs text-black focus:outline-none focus:border-blue-500"
         />
       </div>
 
@@ -224,10 +224,10 @@ export const ParcTab: React.FC<Props> = ({ db, onSelectGE, onOpenNewGE, onUpdate
                       onClick={() => onSelectGE(g.id)}
                       className="hover:bg-blue-50/50 cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-4 font-bold text-blue-900">{g.id}</td>
-                      <td className="px-4 py-4 text-slate-700">
-                        <span className="font-semibold block">{g.client}</span>
-                        <span className="text-xs text-slate-400 font-medium">{g.site}</span>
+                      <td className="px-4 py-4 font-black text-blue-900">{g.id}</td>
+                      <td className="px-4 py-4 text-black">
+                        <span className="font-black block uppercase leading-tight">{g.client}</span>
+                        <span className="text-[11px] text-slate-800 font-bold uppercase opacity-90">{g.site}</span>
                       </td>
                       <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1 text-slate-700 font-semibold">

@@ -4,15 +4,15 @@ import { fmt, todayYMD, pd, today } from "../utils/calculations";
 
 interface Props {
   db: AppDatabase;
+  selectedMonth: string;
   onAddTask: (task: Task) => void;
   onUpdateTask: (idx: number, updated: Partial<Task>) => void;
   onDeleteTask: (idx: number) => void;
 }
 
-export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask, onDeleteTask }) => {
+export const InterventionsTab: React.FC<Props> = ({ db, selectedMonth, onAddTask, onUpdateTask, onDeleteTask }) => {
   const [search, setSearch] = useState("");
   const [filtStatut, setFiltStatut] = useState("");
-  const [filtMois, setFiltMois] = useState("");
 
   // Pagination state
   const [perPage, setPerPage] = useState(50);
@@ -90,8 +90,6 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
     return defaultM;
   };
 
-  const monthsKeys = Array.from(new Set(db.taches.map(getTaskMonthKey))).sort().reverse();
-
   // Helper for technician avatar
   const getAvatarInitials = (name: string) => {
     const trimmed = (name || "").trim();
@@ -121,7 +119,7 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
       const hay = `${t.id || ""} ${t.titre || ""} ${t.client || ""} ${t.site || ""} ${t.assigne || ""} ${t.ge || ""} ${t.notes || ""}`.toLowerCase();
       const matchesSearch = hay.includes(search.toLowerCase());
       const matchesStatut = !filtStatut || t.statut === filtStatut;
-      const matchesMois = !filtMois || getTaskMonthKey(t) === filtMois;
+      const matchesMois = !selectedMonth || getTaskMonthKey(t) === selectedMonth;
 
       return matchesSearch && matchesStatut && matchesMois;
     });
@@ -487,25 +485,25 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
     <div id="taches" className="space-y-6">
       {/* Mini KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl p-4 shadow-xs border-l-5 border-l-slate-700">
-          <div className="text-2xl font-extrabold text-slate-800">{totalItems}</div>
-          <div className="text-xs uppercase text-slate-500 font-semibold tracking-wide">Total Interventions</div>
+        <div className="bg-white rounded-xl p-4 shadow-xs border-l-5 border-l-slate-900">
+          <div className="text-2xl font-black text-black">{totalItems}</div>
+          <div className="text-xs uppercase text-slate-600 font-bold tracking-wide">Total Interventions</div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-xs border-l-5 border-l-red-600">
-          <div className="text-2xl font-extrabold text-red-600">{p1Count}</div>
-          <div className="text-xs uppercase text-slate-500 font-semibold tracking-wide">Urgent / P1</div>
+          <div className="text-2xl font-black text-red-600">{p1Count}</div>
+          <div className="text-xs uppercase text-slate-600 font-bold tracking-wide">Urgent / P1</div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-xs border-l-5 border-l-blue-600">
-          <div className="text-2xl font-extrabold text-blue-600">{activeCount}</div>
-          <div className="text-xs uppercase text-slate-500 font-semibold tracking-wide">Actives</div>
+          <div className="text-2xl font-black text-blue-600">{activeCount}</div>
+          <div className="text-xs uppercase text-slate-600 font-bold tracking-wide">Actives</div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-xs border-l-5 border-l-green-600">
-          <div className="text-2xl font-extrabold text-green-600">{termCount}</div>
-          <div className="text-xs uppercase text-slate-500 font-semibold tracking-wide">Terminées</div>
+          <div className="text-2xl font-black text-green-600">{termCount}</div>
+          <div className="text-xs uppercase text-slate-600 font-bold tracking-wide">Terminées</div>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-xs border-l-5 border-l-purple-600">
-          <div className="text-2xl font-extrabold text-purple-600">{avgProg}%</div>
-          <div className="text-xs uppercase text-slate-500 font-semibold tracking-wide">Progression moyenne</div>
+          <div className="text-2xl font-black text-purple-600">{avgProg}%</div>
+          <div className="text-xs uppercase text-slate-600 font-bold tracking-wide">Progression moyenne</div>
         </div>
       </div>
 
@@ -570,13 +568,13 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
             placeholder="🔎 Rechercher ici avec plusieurs valeurs séparées par des espaces (ET)"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500"
+            className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black focus:outline-none focus:border-blue-500"
           />
 
           <select
             value={filtStatut}
             onChange={(e) => setFiltStatut(e.target.value)}
-            className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+            className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black focus:outline-none focus:border-blue-500 cursor-pointer"
           >
             <option value="">Tous statuts</option>
             <option value="Non commencé">Non commencé</option>
@@ -585,20 +583,6 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
             <option value="Bloqué">Bloqué</option>
             <option value="Terminé">Terminé</option>
           </select>
-
-          <select
-            value={filtMois}
-            onChange={(e) => setFiltMois(e.target.value)}
-            className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
-          >
-            <option value="">Tous les mois</option>
-            {monthsKeys.map((mk, i) => (
-              <option key={i} value={mk}>
-                {mk}
-              </option>
-            ))}
-          </select>
-
           <button
             onClick={triggerAddTache}
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black cursor-pointer transition-colors shadow-sm"
@@ -701,16 +685,16 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 font-bold text-slate-800">{t.id}</td>
+                      <td className="px-4 py-3 font-black text-black">{t.id}</td>
                       <td className="px-4 py-3">
-                        <span className="font-semibold block text-slate-700">{t.client}</span>
-                        <span className="text-xs text-slate-400 font-medium block">{t.site}</span>
+                        <span className="font-bold block text-black">{t.client}</span>
+                        <span className="text-xs text-slate-600 font-bold block">{t.site}</span>
                       </td>
                       <td className="px-4 py-3 leading-normal">
-                        <span className="font-semibold text-slate-700">{t.titre}</span>
+                        <span className="font-bold text-black">{t.titre}</span>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {t.type && <span className="bg-slate-100 text-slate-600 text-[10px] font-bold px-1.5 py-0.5 rounded">🏷️ {t.type}</span>}
-                          {t.ge && <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded">🔧 {t.ge}</span>}
+                          {t.type && <span className="bg-slate-100 text-black text-[10px] font-black px-1.5 py-0.5 rounded">🏷️ {t.type}</span>}
+                          {t.ge && <span className="bg-blue-50 text-blue-900 text-[10px] font-black px-1.5 py-0.5 rounded">🔧 {t.ge}</span>}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-xs font-semibold text-slate-600">{t.type}</td>
@@ -727,7 +711,7 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
                           <option value="Terminé">Terminé</option>
                         </select>
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-500 font-semibold">{fmt(_ddemande(t))}</td>
+                      <td className="px-4 py-3 text-xs text-black font-bold">{fmt(_ddemande(t))}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <span
@@ -736,7 +720,7 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
                           >
                             {getAvatarInitials(t.assigne)}
                           </span>
-                          <span className="text-xs font-medium text-slate-600 leading-tight block truncate max-w-[90px]">{t.assigne || "Non assigné"}</span>
+                          <span className="text-xs font-bold text-black leading-tight block truncate max-w-[90px]">{t.assigne || "Non assigné"}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -746,7 +730,7 @@ export const InterventionsTab: React.FC<Props> = ({ db, onAddTask, onUpdateTask,
                             style={{ width: `${t.prog || 0}%` }}
                           />
                         </div>
-                        <div className="text-[10px] font-bold text-slate-400 mt-1">{t.prog || 0}%</div>
+                        <div className="text-[10px] font-black text-black mt-1">{t.prog || 0}%</div>
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button

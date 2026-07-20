@@ -111,7 +111,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="text" 
                     value={formData.client} 
                     onChange={e => handleChange("client", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -120,7 +120,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="text" 
                     value={formData.site} 
                     onChange={e => handleChange("site", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -132,7 +132,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="text" 
                     value={formData.marque || ""} 
                     onChange={e => handleChange("marque", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -141,7 +141,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="number" 
                     value={formData.kva || ""} 
                     onChange={e => handleChange("kva", e.target.value === "" ? "" : Number(e.target.value))}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -151,7 +151,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                 <select 
                   value={formData.etat || "Opérationnel"} 
                   onChange={e => handleChange("etat", e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all cursor-pointer"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all cursor-pointer"
                 >
                   <option value="Opérationnel">Opérationnel</option>
                   <option value="En panne">En panne</option>
@@ -169,7 +169,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     onChange={e => handleChange("comm", e.target.value)}
                     rows={3}
                     placeholder="Pourquoi le groupe est-il arrêté ?"
-                    className="w-full px-4 py-2.5 bg-red-50/30 border border-red-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-red-50/30 border border-red-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition-all"
                   />
                 </div>
               )}
@@ -189,7 +189,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="date" 
                     value={formData.dvid || ""} 
                     onChange={e => handleChange("dvid", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -198,7 +198,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="number" 
                     value={formData.hvid ?? ""} 
                     onChange={e => handleChange("hvid", e.target.value === "" ? 0 : Number(e.target.value))}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -210,7 +210,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="date" 
                     value={formData.drel || ""} 
                     onChange={e => handleChange("drel", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -219,7 +219,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="number" 
                     value={formData.hrel ?? ""} 
                     onChange={e => handleChange("hrel", e.target.value === "" ? 0 : Number(e.target.value))}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black text-blue-700"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black text-blue-700"
                   />
                 </div>
               </div>
@@ -231,7 +231,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="number" 
                     value={formData.seuil ?? 250} 
                     onChange={e => handleChange("seuil", e.target.value === "" ? 250 : Number(e.target.value))}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -241,7 +241,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     step="0.01"
                     value={formData.regime ?? ""} 
                     onChange={e => handleChange("regime", e.target.value === "" ? 0 : Number(e.target.value))}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -253,7 +253,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="date" 
                     value={formData.dbatt || ""} 
                     onChange={e => handleChange("dbatt", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -262,7 +262,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                     type="date" 
                     value={formData.dcourr || ""} 
                     onChange={e => handleChange("dcourr", e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-black focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
                   />
                 </div>
               </div>
@@ -283,7 +283,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                   type="text" 
                   value={formData.fhuile || ""} 
                   onChange={e => handleChange("fhuile", e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold text-black outline-none"
                 />
               </div>
               <div className="space-y-1.5">
@@ -292,7 +292,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                   type="text" 
                   value={formData.fgasoil || ""} 
                   onChange={e => handleChange("fgasoil", e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold text-black outline-none"
                 />
               </div>
               <div className="space-y-1.5">
@@ -301,7 +301,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                   type="text" 
                   value={formData.fair || ""} 
                   onChange={e => handleChange("fair", e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold text-black outline-none"
                 />
               </div>
               <div className="space-y-1.5">
@@ -310,7 +310,7 @@ export const GEModal: React.FC<Props> = ({ ge, db, onClose, onSave }) => {
                   type="text" 
                   value={formData.fcourroie || ""} 
                   onChange={e => handleChange("fcourroie", e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold outline-none"
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-[11px] font-bold text-black outline-none"
                 />
               </div>
             </div>

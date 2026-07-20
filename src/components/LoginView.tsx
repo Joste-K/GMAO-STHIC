@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { AuthManager } from "../utils/firebase";
-import { LogIn, Key, Mail, AlertTriangle, User, ArrowRight } from "lucide-react";
+import { LogIn, Key, Mail, AlertTriangle, User, ArrowRight, Sparkles } from "lucide-react";
 
 interface Props {
   onSuccess: () => void;
@@ -127,9 +127,23 @@ export function LoginView({ onSuccess }: Props) {
               </button>
             </div>
           ) : error ? (
-            <div className="p-3 bg-red-50 border border-red-150 rounded-xl text-red-800 text-xs flex gap-2 font-bold items-start shadow-3xs animate-in fade-in duration-150">
-              <AlertTriangle size={15} className="shrink-0 text-red-600 mt-0.5" />
-              <div>{error}</div>
+            <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl text-red-800 text-[11px] flex gap-3 font-medium items-start shadow-sm">
+                <AlertTriangle size={18} className="shrink-0 text-red-500 mt-0.5" />
+                <div className="leading-relaxed">
+                  <p className="font-bold mb-0.5">Erreur de connexion</p>
+                  <p className="opacity-80">Identifiants incorrects ou service indisponible.</p>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => AuthManager.setForceSandbox(true)}
+                type="button"
+                className="w-full h-11 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-xl text-[11px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 border border-amber-200"
+              >
+                <Sparkles size={14} className="text-amber-500" />
+                DÉBLOQUER : UTILISER LE MODE DÉMO
+              </button>
             </div>
           ) : null}
 

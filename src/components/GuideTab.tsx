@@ -101,7 +101,7 @@ export const GuideTab: React.FC = () => {
           placeholder="🔎 Rechercher un mot clé (batterie, fumée, surchauffe)…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="px-4 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-blue-500 w-full sm:w-[320px]"
+          className="px-4 py-2 border border-slate-200 bg-white rounded-xl text-sm text-black focus:outline-none focus:border-blue-500 w-full sm:w-[320px]"
         />
       </div>
 
