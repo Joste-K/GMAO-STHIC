@@ -9,9 +9,10 @@ interface Props {
   user: UserProfile;
   onRestoreDB: (restored: AppDatabase) => void;
   onResetDB: () => void;
+  onOpenImportModal?: () => void;
 }
 
-export const DonneesTab: React.FC<Props> = ({ db, user, onRestoreDB, onResetDB }) => {
+export const DonneesTab: React.FC<Props> = ({ db, user, onRestoreDB, onResetDB, onOpenImportModal }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const [syncing, setSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -138,17 +139,25 @@ export const DonneesTab: React.FC<Props> = ({ db, user, onRestoreDB, onResetDB }
           </p>
 
           <div className="flex flex-wrap gap-2.5 pt-2">
+            {onOpenImportModal && (
+              <button
+                onClick={onOpenImportModal}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black cursor-pointer transition-colors flex items-center gap-2 shadow-xs"
+              >
+                <span>📥 Mettre à jour depuis un fichier (Excel/JSON)</span>
+              </button>
+            )}
             <button
               onClick={handleExportJSON}
               className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors"
             >
-              📥 Exporter la base (JSON)
+              💾 Exporter la base (JSON)
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold cursor-pointer transition-colors"
             >
-              📤 Restaurer depuis fichier
+              📤 Restauration rapide JSON
             </button>
             <input
               type="file"

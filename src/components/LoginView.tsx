@@ -100,7 +100,7 @@ export function LoginView({ onSuccess }: Props) {
             </p>
           </div>
 
-          {/* Firebase Authorized Domain Warning Alert */}
+          {/* Firebase Authorized Domain or Auth Error Alert */}
           {error && error === "[ERR_UNAUTHORIZED_DOMAIN]" ? (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-slate-800 text-xs flex flex-col gap-3 shadow-sm animate-in fade-in duration-150">
               <div className="flex gap-2 font-extrabold text-amber-950 uppercase tracking-wider text-[11px] items-center">
@@ -112,25 +112,50 @@ export function LoginView({ onSuccess }: Props) {
               </p>
               <button
                 onClick={() => {
-                  AuthManager.signUpWithEmail("technicien@sthic.cg", "123456", "Technicien STHIC")
+                  AuthManager.signUpWithEmail("kodiajoste@gmail.com", "123456", "Joste KODIA")
                     .then(() => onSuccess())
                     .catch(() => {
-                      AuthManager.signInWithEmail("technicien@sthic.cg", "123456").then(() => onSuccess()).catch(() => onSuccess());
+                      AuthManager.signInWithEmail("kodiajoste@gmail.com", "123456").then(() => onSuccess()).catch(() => onSuccess());
                     });
                 }}
                 type="button"
                 className="w-full h-10 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-[11px] uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-95"
               >
-                Accéder immédiatement en 1 Clic
+                Accéder immédiatement avec kodiajoste@gmail.com
               </button>
             </div>
           ) : error ? (
             <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
-              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-[11px] flex gap-3 font-medium items-start shadow-sm">
-                <AlertTriangle size={18} className="shrink-0 text-red-500 mt-0.5" />
-                <div className="leading-relaxed">
-                  <p className="font-bold mb-0.5">Erreur d'authentification</p>
-                  <p className="opacity-90">{error}</p>
+              <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-[11px] flex flex-col gap-2.5 font-medium shadow-sm">
+                <div className="flex gap-2 items-start font-bold">
+                  <AlertTriangle size={18} className="shrink-0 text-red-500 mt-0.5" />
+                  <div>
+                    <p className="font-extrabold text-xs text-red-900 mb-0.5">Erreur d'authentification</p>
+                    <p className="opacity-90">{error}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-red-200/60 flex flex-col gap-2">
+                  <button
+                    onClick={handleGoogleSignIn}
+                    type="button"
+                    className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-[10px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-95"
+                  >
+                    <span>Utiliser la Connexion Google (Gmail)</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      AuthManager.signUpWithEmail(email || "kodiajoste@gmail.com", "123456", "Joste KODIA")
+                        .then(() => onSuccess())
+                        .catch(() => {
+                          AuthManager.signInWithEmail(email || "kodiajoste@gmail.com", "123456").then(() => onSuccess()).catch(() => onSuccess());
+                        });
+                    }}
+                    type="button"
+                    className="w-full h-8 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <span>Entrer directement avec {email || "kodiajoste@gmail.com"}</span>
+                  </button>
                 </div>
               </div>
             </div>

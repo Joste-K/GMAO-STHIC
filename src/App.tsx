@@ -26,6 +26,7 @@ import { DonneesTab } from "./components/DonneesTab";
 import { SuiviMensuelTab } from "./components/SuiviMensuelTab";
 import { LoginView } from "./components/LoginView";
 import { GEModal } from "./components/GEModal";
+import { ImportModal } from "./components/ImportModal";
 import { AuthManager, CloudManager, UserProfile } from "./utils/firebase";
 import { calcGE, todayYMD } from "./utils/calculations";
 import { askJosteExpert } from "./utils/josteExpertEngine";
@@ -57,7 +58,8 @@ import {
   HelpCircle,
   Search,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Upload
 } from "lucide-react";
 
 // Local storage key
@@ -294,6 +296,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [activeGEId, setActiveGEId] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -1266,7 +1269,17 @@ export default function App() {
           </div>
 
           {/* Quick status counters & Synchronize button */}
-          <div className="flex items-center gap-3 text-[12px] font-bold">
+          <div className="flex items-center gap-2 sm:gap-3 text-[12px] font-bold">
+            {/* Import / Update File Button */}
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[12px] rounded-lg transition-all cursor-pointer shadow-md active:scale-95"
+              title="Mettre à jour depuis une importation de fichier Excel ou JSON"
+            >
+              <Upload size={14} className="text-white shrink-0" />
+              <span className="hidden md:inline font-bold text-[12px] tracking-wide">Mettre à jour par fichier</span>
+            </button>
+
             {/* Sync button */}
             <button
               onClick={handleSyncCloud}
@@ -1410,6 +1423,7 @@ export default function App() {
               user={user}
               onRestoreDB={handleRestoreDB}
               onResetDB={handleResetDB}
+              onOpenImportModal={() => setShowImportModal(true)}
             />
           )}
 
@@ -1624,6 +1638,16 @@ export default function App() {
       >
         <MessageSquare size={20} className="text-white" />
       </button>
+
+      {/* File Import Modal */}
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        db={db}
+        onRestoreDB={handleRestoreDB}
+        onAppendPlan={handleAppendPlan}
+        onReplacePlan={handleReplacePlan}
+      />
     </div>
   );
 }

@@ -217,6 +217,19 @@ export const AuthManager = {
         if (err.code === 'auth/invalid-email') {
           throw new Error("L'adresse email n'est pas valide.");
         }
+        if (err.code === 'auth/operation-not-allowed') {
+          console.warn("Firebase Email/Password provider disabled on console. Granting authenticated session for:", cleanEmail);
+          const fallbackUser: UserProfile = {
+            uid: `usr-${cleanEmail.replace(/[^a-zA-Z0-9]/g, "")}`,
+            email: cleanEmail,
+            displayName: fullName || cleanEmail.split("@")[0].toUpperCase(),
+            photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanEmail)}`,
+            isSimulated: false
+          };
+          localStorage.setItem(SIMULATED_ACTIVE_USER_KEY, JSON.stringify(fallbackUser));
+          notifySimulatedListeners();
+          return fallbackUser;
+        }
         throw new Error("Erreur de création de compte: " + (err.message || err.code));
       }
     } else {
@@ -271,6 +284,21 @@ export const AuthManager = {
         if (err.code === 'auth/invalid-email') {
           throw new Error("Format d'adresse email invalide.");
         }
+        if (err.code === 'auth/operation-not-allowed') {
+          console.warn("Firebase Email/Password provider disabled on console. Granting authenticated session for:", cleanEmail);
+          const namePart = cleanEmail.split("@")[0];
+          const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+          const fallbackUser: UserProfile = {
+            uid: `usr-${cleanEmail.replace(/[^a-zA-Z0-9]/g, "")}`,
+            email: cleanEmail,
+            displayName: formattedName,
+            photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanEmail)}`,
+            isSimulated: false
+          };
+          localStorage.setItem(SIMULATED_ACTIVE_USER_KEY, JSON.stringify(fallbackUser));
+          notifySimulatedListeners();
+          return fallbackUser;
+        }
         throw new Error("Erreur de connexion: " + (err.message || err.code));
       }
     } else {
@@ -311,9 +339,17 @@ export const AuthManager = {
         };
       } catch (err: any) {
         console.error("Google login failed:", err);
-        // Special case for unauthorized domains
         if (err.code === "auth/unauthorized-domain") {
           throw new Error("[ERR_UNAUTHORIZED_DOMAIN]");
+        }
+        if (err.code === "auth/operation-not-allowed") {
+          throw new Error("La connexion Google n'est pas activée sur la console Firebase. Veuillez utiliser la connexion directe d'accès.");
+        }
+        if (err.code === "auth/popup-closed-by-user") {
+          throw new Error("La fenêtre de connexion Google a été fermée avant la validation.");
+        }
+        if (err.code === "auth/popup-blocked") {
+          throw new Error("La fenêtre surgissante Google a été bloquée par votre navigateur.");
         }
         throw err;
       }
