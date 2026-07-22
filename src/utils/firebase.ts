@@ -198,20 +198,32 @@ export const AuthManager = {
     }
 
     if (isRealFirebase && auth) {
-      const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
-      // We simulate displayName update via custom profiles if needed, or return directly
-      return {
-        uid: cred.user.uid,
-        email: cred.user.email,
-        displayName: fullName || cleanEmail.split("@")[0],
-        photoURL: null,
-        isSimulated: false
-      };
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+        return {
+          uid: cred.user.uid,
+          email: cred.user.email,
+          displayName: fullName || cleanEmail.split("@")[0],
+          photoURL: null,
+          isSimulated: false
+        };
+      } catch (err: any) {
+        if (err.code === 'auth/email-already-in-use') {
+          throw new Error("Cette adresse email est déjà associée à un compte. Veuillez vous connecter.");
+        }
+        if (err.code === 'auth/weak-password') {
+          throw new Error("Le mot de passe doit comporter au moins 6 caractères.");
+        }
+        if (err.code === 'auth/invalid-email') {
+          throw new Error("L'adresse email n'est pas valide.");
+        }
+        throw new Error("Erreur de création de compte: " + (err.message || err.code));
+      }
     } else {
       // Simulate sign up
       const users = getSimulatedUsers();
       if (users[cleanEmail]) {
-        throw new Error("Cet utilisateur existe déjà.");
+        throw new Error("Cet utilisateur existe déjà. Veuillez vous connecter.");
       }
       users[cleanEmail] = { email: cleanEmail, password: pass, name: fullName };
       saveSimulatedUsers(users);
@@ -240,14 +252,27 @@ export const AuthManager = {
     }
 
     if (isRealFirebase && auth) {
-      const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
-      return {
-        uid: cred.user.uid,
-        email: cred.user.email,
-        displayName: cred.user.displayName || cleanEmail.split("@")[0],
-        photoURL: cred.user.photoURL,
-        isSimulated: false
-      };
+      try {
+        const cred = await signInWithEmailAndPassword(auth, cleanEmail, pass);
+        return {
+          uid: cred.user.uid,
+          email: cred.user.email,
+          displayName: cred.user.displayName || cleanEmail.split("@")[0],
+          photoURL: cred.user.photoURL,
+          isSimulated: false
+        };
+      } catch (err: any) {
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          throw new Error("Identifiants introuvables. Vérifiez vos saisies ou créez un compte si vous êtes nouveau.");
+        }
+        if (err.code === 'auth/wrong-password') {
+          throw new Error("Mot de passe incorrect.");
+        }
+        if (err.code === 'auth/invalid-email') {
+          throw new Error("Format d'adresse email invalide.");
+        }
+        throw new Error("Erreur de connexion: " + (err.message || err.code));
+      }
     } else {
       // Simulate login
       const users = getSimulatedUsers();

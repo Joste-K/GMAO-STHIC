@@ -378,7 +378,15 @@ export default function App() {
       setUser(profile);
       setAuthLoading(false);
     });
-    return () => unsub();
+
+    const timer = setTimeout(() => {
+      setAuthLoading(false);
+    }, 2000);
+
+    return () => {
+      unsub();
+      clearTimeout(timer);
+    };
   }, []);
 
   // Auto-save database to local storage whenever state changes

@@ -20,23 +20,32 @@ export const SuiviMensuelTab: React.FC<Props> = ({ db, selectedMonth, onUpdateGE
   const [editMode, setEditMode] = useState<string | null>(null); // geId being edited
   const [tempHours, setTempHours] = useState<number | "">("");
 
+  const [message, setMessage] = useState<string | null>(null);
+
+  const showNotification = (msg: string) => {
+    setMessage(msg);
+    setTimeout(() => setMessage(null), 3500);
+  };
+
   // Filter GEs
   const filteredGEs = useMemo(() => {
-    return db.parc.filter(g => {
-      const hay = `${g.client} ${g.site} ${g.id} ${g.marque || ""}`.toLowerCase();
+    return (db.parc || []).filter(g => {
+      const hay = `${g.client || ""} ${g.site || ""} ${g.id || ""} ${g.marque || ""}`.toLowerCase();
       return hay.includes(search.toLowerCase());
     });
   }, [db.parc, search]);
 
   const handleSaveHours = (ge: GE) => {
-    if (tempHours === "") return;
+    if (tempHours === "" || isNaN(Number(tempHours))) return;
     
+    const h = Number(tempHours);
     onUpdateGE(ge.id, {
-      hrel: Number(tempHours),
+      hrel: h,
       drel: todayYMD()
     });
     setEditMode(null);
     setTempHours("");
+    showNotification(`✅ Relevé de ${h}h enregistré avec succès pour ${ge.client} - ${ge.site} (${ge.id}).`);
   };
 
   const handleMarkDone = (ge: GE, type: 'vidange' | 'batterie' | 'courroie') => {
@@ -60,6 +69,7 @@ export const SuiviMensuelTab: React.FC<Props> = ({ db, selectedMonth, onUpdateGE
     
     // Add a light intervention record
     onAddIntervention({
+      num: `INT-${Date.now().toString().slice(-6)}`,
       client: ge.client,
       site: ge.site,
       ge: ge.id,
@@ -74,6 +84,9 @@ export const SuiviMensuelTab: React.FC<Props> = ({ db, selectedMonth, onUpdateGE
       dplan: today,
       urg: "Moyen"
     });
+
+    const typeLabel = type === 'vidange' ? 'Vidange' : type === 'batterie' ? 'Batterie' : 'Courroie';
+    showNotification(`✅ ${typeLabel} validée pour le groupe ${ge.client} - ${ge.site} (${ge.id}).`);
   };
 
   return (
@@ -100,11 +113,18 @@ export const SuiviMensuelTab: React.FC<Props> = ({ db, selectedMonth, onUpdateGE
         </div>
       </div>
 
+      {message && (
+        <div className="bg-emerald-600 text-white font-bold p-3.5 rounded-xl shadow-md text-sm flex items-center justify-between animate-fadeIn">
+          <span>{message}</span>
+          <button onClick={() => setMessage(null)} className="text-white font-bold text-xs ml-4 underline">Fermer</button>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-100 text-slate-900 text-[10px] uppercase tracking-widest font-bold">
+              <tr className="bg-slate-100 text-slate-900 text-[11px] uppercase tracking-widest font-bold">
                 <th className="px-6 py-4 border-b">GE / Site</th>
                 <th className="px-6 py-4 border-b">Dernier Relevé</th>
                 <th className="px-6 py-4 border-b">Heures Actuelles</th>
@@ -114,20 +134,24 @@ export const SuiviMensuelTab: React.FC<Props> = ({ db, selectedMonth, onUpdateGE
                 <th className="px-6 py-4 border-b text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {filteredGEs.map(g => {
                 const c = calcGE(g, db.inter || []);
                 const isEditing = editMode === g.id;
 
+                const formatStatusLabel = (str: string) => {
+                  return str.replace(/^[🔴🟠🟢⚪]\s*/, '') || 'OK';
+                };
+
                 return (
-                  <tr key={g.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={g.id} className="hover:bg-slate-50/80 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="font-black text-black text-sm uppercase leading-tight">{g.client}</div>
-                      <div className="text-[11px] text-slate-900 font-black uppercase opacity-80">{g.site} <span className="text-[10px] bg-slate-900 text-white px-1.5 py-0.5 rounded ml-1">{g.id}</span></div>
+                      <div className="text-[11px] text-slate-900 font-black uppercase opacity-90">{g.site} <span className="text-[10px] bg-slate-900 text-white px-1.5 py-0.5 rounded ml-1">{g.id}</span></div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-black text-black">{g.hrel || 0} h</div>
-                      <div className="text-[10px] text-slate-900 font-bold">{g.drel ? fmtD(g.drel) : 'Jamais'}</div>
+                      <div className="text-[10px] text-slate-700 font-bold">{g.drel ? fmtD(g.drel) : 'Jamais'}</div>
                     </td>
                     <td className="px-6 py-4">
                       {isEditing ? (
@@ -136,14 +160,19 @@ export const SuiviMensuelTab: React.FC<Props> = ({ db, selectedMonth, onUpdateGE
                             type="number"
                             value={tempHours}
                             onChange={(e) => setTempHours(e.target.value === "" ? "" : Number(e.target.value))}
-                            className="w-24 px-2 py-1 border border-blue-400 rounded text-sm text-black focus:outline-none ring-2 ring-blue-100"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveHours(g);
+                              if (e.key === "Escape") setEditMode(null);
+                            }}
+                            className="w-28 px-2 py-1 border border-blue-500 rounded text-sm text-black font-bold focus:outline-none ring-2 ring-blue-200"
                             autoFocus
                           />
                           <button 
                             onClick={() => handleSaveHours(g)}
-                            className="p-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                            title="Enregistrer"
+                            className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer shadow-sm"
                           >
-                            <Save size={14} />
+                            <Save size={15} />
                           </button>
                         </div>
                       ) : (
@@ -153,9 +182,10 @@ export const SuiviMensuelTab: React.FC<Props> = ({ db, selectedMonth, onUpdateGE
                             setTempHours(g.hrel || 0);
                           }}
                           className="flex items-center gap-2 cursor-pointer group-hover:text-blue-600 transition-colors"
+                          title="Cliquer pour modifier les heures"
                         >
-                          <span className="text-sm font-bold">{g.hrel || 0} h</span>
-                          <Clock size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <span className="text-sm font-bold text-slate-900">{g.hrel || 0} h</span>
+                          <Clock size={13} className="text-blue-500 opacity-60 group-hover:opacity-100 transition-opacity" />
                         </div>
                       )}
                     </td>
@@ -164,47 +194,57 @@ export const SuiviMensuelTab: React.FC<Props> = ({ db, selectedMonth, onUpdateGE
                     <td className="px-6 py-4 text-center">
                       <button 
                         onClick={() => handleMarkDone(g, 'vidange')}
-                        className={`inline-flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-                          c.sv.includes('🔴') ? 'bg-red-50 text-red-600 hover:bg-red-100' : 
-                          c.sv.includes('🟠') ? 'bg-amber-50 text-amber-600 hover:bg-amber-100' :
-                          'bg-green-50 text-green-600 hover:bg-green-100'
+                        title="Enregistrer une vidange"
+                        className={`inline-flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold ${
+                          c.sv.includes('🔴') ? 'bg-red-100 text-red-700 hover:bg-red-200 shadow-sm border border-red-200' : 
+                          c.sv.includes('🟠') ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 shadow-sm border border-amber-200' :
+                          'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-200'
                         }`}
                       >
                         <Wrench size={16} />
-                        <span className="text-[9px] font-black">{c.sv.split(' ')[1] || 'OK'}</span>
+                        <span className="text-[10px] font-black">{formatStatusLabel(c.sv)}</span>
                       </button>
                     </td>
 
                     <td className="px-6 py-4 text-center">
                       <button 
                         onClick={() => handleMarkDone(g, 'batterie')}
-                        className={`inline-flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-                          c.bs.includes('🔴') ? 'bg-red-50 text-red-600 hover:bg-red-100' : 
-                          'bg-green-50 text-green-600 hover:bg-green-100'
+                        title="Enregistrer le remplacement de batterie"
+                        className={`inline-flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold ${
+                          c.bs.includes('🔴') ? 'bg-red-100 text-red-700 hover:bg-red-200 shadow-sm border border-red-200' : 
+                          'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-200'
                         }`}
                       >
                         <Battery size={16} />
-                        <span className="text-[9px] font-black">{c.bs.split(' ')[1] || 'OK'}</span>
+                        <span className="text-[10px] font-black">{formatStatusLabel(c.bs)}</span>
                       </button>
                     </td>
 
                     <td className="px-6 py-4 text-center">
                       <button 
                         onClick={() => handleMarkDone(g, 'courroie')}
-                        className={`inline-flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-                          c.cs.includes('🔴') ? 'bg-red-50 text-red-600 hover:bg-red-100' : 
-                          'bg-green-50 text-green-600 hover:bg-green-100'
+                        title="Enregistrer le remplacement de courroie"
+                        className={`inline-flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold ${
+                          c.cs.includes('🔴') ? 'bg-red-100 text-red-700 hover:bg-red-200 shadow-sm border border-red-200' : 
+                          'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-200'
                         }`}
                       >
                         <RefreshCw size={16} />
-                        <span className="text-[9px] font-black">{c.cs.split(' ')[1] || 'OK'}</span>
+                        <span className="text-[10px] font-black">{formatStatusLabel(c.cs)}</span>
                       </button>
                     </td>
 
                     <td className="px-6 py-4 text-right">
                       <button 
-                        onClick={() => setEditMode(isEditing ? null : g.id)}
-                        className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+                        onClick={() => {
+                          if (isEditing) {
+                            setEditMode(null);
+                          } else {
+                            setEditMode(g.id);
+                            setTempHours(g.hrel || 0);
+                          }
+                        }}
+                        className="text-xs font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg transition-all"
                       >
                         {isEditing ? 'Annuler' : 'Saisir relevé'}
                       </button>

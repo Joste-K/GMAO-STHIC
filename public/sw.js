@@ -1,38 +1,37 @@
-const CACHE_NAME = "sthic-gmao-v1";
-const ASSETS = [
-  "/",
-  "/index.html",
-  "/manifest.json"
-];
+const CACHE_NAME = "sthic-gmao-v2";
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS).catch(err => console.log("Assets cache skip:", err));
-    })
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+        keys.map((key) => caches.delete(key))
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener("fetch", (e) => {
+  if (e.request.method !== "GET" || !e.request.url.startsWith("http")) return;
+
+  // Network-first strategy: always try network first so new builds load instantly
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request);
-    }).catch(() => {
-      return fetch(e.request);
-    })
+    fetch(e.request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type === "basic") {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseToCache);
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        return caches.match(e.request).then((cached) => cached || Response.error());
+      })
   );
 });
+
