@@ -296,6 +296,7 @@ export default function App() {
   const [activeGEId, setActiveGEId] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     // Try to recover last selected month or default to June 2026 for now
     return localStorage.getItem("sthic_selected_month") || "2026-06";
@@ -409,9 +410,11 @@ export default function App() {
   };
 
   const handleSyncCloud = async () => {
+    setIsSyncing(true);
     try {
       // 1. Get the current local database
       const localDb = db;
+      const activeUserId = user?.uid || "sthic_guest_user";
       
       // 2. Perform Excel Catalog/Seed merge on the local database
       const existingKeys = new Set(localDb.parc.map(g => `${g.client}|${g.site}|${g.marque}`.toUpperCase()));
@@ -451,57 +454,50 @@ export default function App() {
       let finalDb = baseLocalMerged;
       let cloudFound = false;
 
-      if (user) {
-        const cloudDb = await CloudManager.loadFromCloud(user.uid);
-        if (cloudDb && cloudDb.parc && cloudDb.inter && cloudDb.plan && cloudDb.taches) {
-          cloudFound = true;
-          
-          // Merge local merged database with cloud database
-          const mergeArray = <T,>(
-            localArr: T[] | undefined,
-            cloudArr: T[] | undefined,
-            getKey: (item: T) => string
-          ): T[] => {
-            const l = localArr || [];
-            const c = cloudArr || [];
-            const map = new Map<string, T>();
-            // Add cloud items first
-            c.forEach(item => {
-              map.set(getKey(item), item);
-            });
-            // Overwrite/Add local items (local items are newer/modified on this device)
-            l.forEach(item => {
-              map.set(getKey(item), item);
-            });
-            return Array.from(map.values());
-          };
+      const cloudDb = await CloudManager.loadFromCloud(activeUserId);
+      if (cloudDb && cloudDb.parc && cloudDb.inter && cloudDb.plan && cloudDb.taches) {
+        cloudFound = true;
+        
+        // Merge local merged database with cloud database
+        const mergeArray = <T,>(
+          localArr: T[] | undefined,
+          cloudArr: T[] | undefined,
+          getKey: (item: T) => string
+        ): T[] => {
+          const l = localArr || [];
+          const c = cloudArr || [];
+          const map = new Map<string, T>();
+          c.forEach(item => {
+            map.set(getKey(item), item);
+          });
+          l.forEach(item => {
+            map.set(getKey(item), item);
+          });
+          return Array.from(map.values());
+        };
 
-          finalDb = {
-            parc: mergeArray(baseLocalMerged.parc, cloudDb.parc, (g) => g.id),
-            inter: mergeArray(baseLocalMerged.inter, cloudDb.inter, (i) => `${i.client || ''}|${i.site || ''}|${i.ge || ''}|${i.ddeb || ''}`),
-            plan: mergeArray(baseLocalMerged.plan, cloudDb.plan, (p) => `${p.date || ''}|${p.ge || ''}|${p.client || ''}|${p.site || ''}`),
-            anomalies: mergeArray(baseLocalMerged.anomalies, cloudDb.anomalies, (a) => a.id),
-            taches: mergeArray(baseLocalMerged.taches, cloudDb.taches, (t) => t.id),
-            materiel: mergeArray(baseLocalMerged.materiel, cloudDb.materiel, (m) => m.code),
-            magasin: mergeArray(baseLocalMerged.magasin, cloudDb.magasin, (a) => a.ref),
-            mouvements: mergeArray(baseLocalMerged.mouvements, cloudDb.mouvements, (mv) => `${mv.date || ''}|${mv.ref || ''}|${mv.note || ''}`),
-            ventes: mergeArray(baseLocalMerged.ventes, cloudDb.ventes, (v) => `${v.date || ''}|${v.ref || ''}|${v.qte || ''}`),
-            abos: mergeArray(baseLocalMerged.abos, cloudDb.abos, (ab) => `${ab.client || ''}|${ab.type || ''}`),
-            bilans: mergeArray(baseLocalMerged.bilans, cloudDb.bilans, (b) => b.id),
-            rootCauses: mergeArray(baseLocalMerged.rootCauses, cloudDb.rootCauses, (rc) => rc.id),
-            magasinCats: Array.from(new Set([...(baseLocalMerged.magasinCats || []), ...(cloudDb.magasinCats || [])])),
-            magasinUnites: Array.from(new Set([...(baseLocalMerged.magasinUnites || []), ...(cloudDb.magasinUnites || [])]))
-          };
-        }
+        finalDb = {
+          parc: mergeArray(baseLocalMerged.parc, cloudDb.parc, (g) => g.id),
+          inter: mergeArray(baseLocalMerged.inter, cloudDb.inter, (i) => `${i.client || ''}|${i.site || ''}|${i.ge || ''}|${i.ddeb || ''}`),
+          plan: mergeArray(baseLocalMerged.plan, cloudDb.plan, (p) => `${p.date || ''}|${p.ge || ''}|${p.client || ''}|${p.site || ''}`),
+          anomalies: mergeArray(baseLocalMerged.anomalies, cloudDb.anomalies, (a) => a.id),
+          taches: mergeArray(baseLocalMerged.taches, cloudDb.taches, (t) => t.id),
+          materiel: mergeArray(baseLocalMerged.materiel, cloudDb.materiel, (m) => m.code),
+          magasin: mergeArray(baseLocalMerged.magasin, cloudDb.magasin, (a) => a.ref),
+          mouvements: mergeArray(baseLocalMerged.mouvements, cloudDb.mouvements, (mv) => `${mv.date || ''}|${mv.ref || ''}|${mv.note || ''}`),
+          ventes: mergeArray(baseLocalMerged.ventes, cloudDb.ventes, (v) => `${v.date || ''}|${v.ref || ''}|${v.qte || ''}`),
+          abos: mergeArray(baseLocalMerged.abos, cloudDb.abos, (ab) => `${ab.client || ''}|${ab.type || ''}`),
+          bilans: mergeArray(baseLocalMerged.bilans, cloudDb.bilans, (b) => b.id),
+          rootCauses: mergeArray(baseLocalMerged.rootCauses, cloudDb.rootCauses, (rc) => rc.id),
+          magasinCats: Array.from(new Set([...(baseLocalMerged.magasinCats || []), ...(cloudDb.magasinCats || [])])),
+          magasinUnites: Array.from(new Set([...(baseLocalMerged.magasinUnites || []), ...(cloudDb.magasinUnites || [])]))
+        };
       }
 
-      // 4. Save the merged DB back to the cloud (so technicians can download/access it)
-      if (user) {
-        await CloudManager.saveToCloud(user.uid, finalDb);
-        // Store last sync metadata
-        const nowStr = new Date().toLocaleString("fr-FR");
-        localStorage.setItem(`sthic_last_sync_date_${user.uid}`, nowStr);
-      }
+      // 4. Save the merged DB back to the cloud
+      await CloudManager.saveToCloud(activeUserId, finalDb);
+      const nowStr = new Date().toLocaleString("fr-FR");
+      localStorage.setItem(`sthic_last_sync_date_${activeUserId}`, nowStr);
 
       // 5. Update state and local storage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(finalDb));
@@ -510,19 +506,19 @@ export default function App() {
       const isReal = AuthManager.isRealFirebase();
       let msg = "✅ Synchronisation réussie !\n\n";
       msg += `• Fusion du catalogue Excel d'origine effectuée.\n`;
-      if (user) {
-        msg += cloudFound 
-          ? `• Données fusionnées avec succès avec la sauvegarde existante sur le Cloud.\n`
-          : `• Première sauvegarde créée sur le Cloud avec succès.\n`;
-        msg += isReal 
-          ? `• Données stockées en toute sécurité sur Firebase Firestore (partagées avec vos techniciens).\n`
-          : `• Données stockées localement en mode Sandbox (simulation).\n`;
-      }
+      msg += cloudFound 
+        ? `• Données fusionnées avec succès avec la sauvegarde sur le Cloud.\n`
+        : `• Première sauvegarde créée sur le Cloud avec succès.\n`;
+      msg += isReal 
+        ? `• Données stockées en toute sécurité sur Firebase Firestore (partagées avec vos techniciens).\n`
+        : `• Données sauvegardées et sécurisées instantanément sur cet appareil.\n`;
       alert(msg);
 
     } catch (err: any) {
       console.error("Sync error:", err);
       alert("⚠️ Erreur lors de la synchronisation : " + err.message);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -1266,10 +1262,11 @@ export default function App() {
             {/* Sync button */}
             <button
               onClick={handleSyncCloud}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-100 text-black border border-slate-200 rounded-lg transition-all cursor-pointer shadow-sm"
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-100 text-black border border-slate-200 rounded-lg transition-all cursor-pointer shadow-sm disabled:opacity-50"
             >
-              <RefreshCw size={13} className="text-blue-600" />
-              <span>Synchroniser</span>
+              <RefreshCw size={13} className={`text-blue-600 ${isSyncing ? "animate-spin" : ""}`} />
+              <span>{isSyncing ? "Synchronisation..." : "Synchroniser"}</span>
             </button>
 
             {/* Logout button */}
