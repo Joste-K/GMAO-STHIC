@@ -5,8 +5,9 @@ import { calcPlan, fmt, today, todayYMD, pd } from "../utils/calculations";
 import { 
   Search, Calendar, Filter, Download, Upload, Plus, RefreshCw, 
   Settings, Sparkles, Trash2, Play, CheckCircle2, AlertTriangle, 
-  FileSpreadsheet, HelpCircle, ArrowRight, Check, X, Layers, Clock, Info, CheckCircle
+  FileSpreadsheet, HelpCircle, ArrowRight, Check, X, Layers, Clock, Info, CheckCircle, MessageSquare, Send
 } from "lucide-react";
+import { WhatsAppModal } from "./WhatsAppModal";
 
 interface Props {
   db: AppDatabase;
@@ -55,6 +56,10 @@ export const PlanningTab: React.FC<Props> = ({
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [showAnoModal, setShowAnoModal] = useState(false);
   const [showGenMaintModal, setShowGenMaintModal] = useState(false);
+
+  // WhatsApp modal state
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsAppItem, setWhatsAppItem] = useState<PlanningItem | null>(null);
 
   // New Plan form state
   const [newPlanDate, setNewPlanDate] = useState(todayYMD());
@@ -538,6 +543,15 @@ export const PlanningTab: React.FC<Props> = ({
             >
               <Calendar className="w-3.5 h-3.5" /> Générer Rituels
             </button>
+            <button
+              onClick={() => {
+                setWhatsAppItem(null);
+                setShowWhatsAppModal(true);
+              }}
+              className="col-span-2 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black cursor-pointer shadow-sm transition-transform hover:-translate-y-0.5"
+            >
+              <MessageSquare className="w-4 h-4" /> 📲 Partager Planning par WhatsApp
+            </button>
           </div>
         </div>
       </div>
@@ -643,12 +657,25 @@ export const PlanningTab: React.FC<Props> = ({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <input
-                          type="text"
-                          value={p.tech || ""}
-                          onChange={(e) => handleCellChange("tech", e.target.value)}
-                          className="w-32 px-2 py-1 border border-slate-200 rounded-lg text-xs font-bold text-black bg-white focus:outline-none"
-                        />
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={p.tech || ""}
+                            onChange={(e) => handleCellChange("tech", e.target.value)}
+                            className="w-28 px-2 py-1 border border-slate-200 rounded-lg text-xs font-bold text-black bg-white focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWhatsAppItem(p);
+                              setShowWhatsAppModal(true);
+                            }}
+                            className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs cursor-pointer transition-transform hover:scale-110 shadow-xs shrink-0"
+                            title="Envoyer cet ordre de mission au technicien par WhatsApp"
+                          >
+                            <MessageSquare size={13} />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <input
@@ -1112,6 +1139,13 @@ export const PlanningTab: React.FC<Props> = ({
           </div>
         </div>
       )}
+      {/* WhatsApp Modal */}
+      <WhatsAppModal
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        db={db}
+        singlePlanningItem={whatsAppItem}
+      />
     </div>
   );
 };

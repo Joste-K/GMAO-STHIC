@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { AppDatabase, Task, TaskLogEvent, TaskMsg } from "../types";
 import { fmt, todayYMD, pd, today } from "../utils/calculations";
+import { WhatsAppModal } from "./WhatsAppModal";
+import { MessageSquare } from "lucide-react";
 
 interface Props {
   db: AppDatabase;
@@ -21,6 +23,10 @@ export const InterventionsTab: React.FC<Props> = ({ db, selectedMonth, onAddTask
   // Sorting state
   const [sortCol, setSortCol] = useState<string>("prio");
   const [sortDir, setSortDir] = useState<number>(1); // 1 = Asc, -1 = Desc
+
+  // WhatsApp modal state
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsAppTask, setWhatsAppTask] = useState<Task | null>(null);
 
   // Modals state
   const [showAddModal, setShowAddModal] = useState(false);
@@ -713,14 +719,25 @@ export const InterventionsTab: React.FC<Props> = ({ db, selectedMonth, onAddTask
                       </td>
                       <td className="px-4 py-3 text-xs text-black font-bold">{fmt(_ddemande(t))}</td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-xs"
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-xs shrink-0"
                             style={{ backgroundColor: getAvatarColor(t.assigne) }}
                           >
                             {getAvatarInitials(t.assigne)}
                           </span>
-                          <span className="text-xs font-bold text-black leading-tight block truncate max-w-[90px]">{t.assigne || "Non assigné"}</span>
+                          <span className="text-xs font-bold text-black leading-tight block truncate max-w-[80px]">{t.assigne || "Non assigné"}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setWhatsAppTask(t);
+                              setShowWhatsAppModal(true);
+                            }}
+                            className="p-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs cursor-pointer transition-transform hover:scale-110 shadow-2xs shrink-0"
+                            title="Envoyer cet ordre de mission au technicien sur WhatsApp"
+                          >
+                            <MessageSquare size={12} />
+                          </button>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -2139,6 +2156,13 @@ export const InterventionsTab: React.FC<Props> = ({ db, selectedMonth, onAddTask
           </div>
         </div>
       )}
+      {/* WhatsApp Share Modal */}
+      <WhatsAppModal
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        db={db}
+        singleTask={whatsAppTask}
+      />
     </div>
   );
 };
