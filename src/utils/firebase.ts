@@ -13,20 +13,24 @@ import {
 } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc, Firestore } from "firebase/firestore";
 
+import firebaseConfigJson from "../../firebase-applet-config.json";
+
 // User-provided Firebase credentials & potential env variables fallback
 const fallbackConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: firebaseConfigJson.apiKey || "",
+  authDomain: firebaseConfigJson.authDomain || "",
+  projectId: firebaseConfigJson.projectId || "",
+  firestoreDatabaseId: firebaseConfigJson.firestoreDatabaseId || "",
+  storageBucket: firebaseConfigJson.storageBucket || "",
+  messagingSenderId: firebaseConfigJson.messagingSenderId || "",
+  appId: firebaseConfigJson.appId || ""
 };
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || fallbackConfig.apiKey,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || fallbackConfig.authDomain,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || fallbackConfig.projectId,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || fallbackConfig.firestoreDatabaseId,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || fallbackConfig.storageBucket,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || fallbackConfig.messagingSenderId,
   appId: import.meta.env.VITE_FIREBASE_APP_ID || fallbackConfig.appId
@@ -51,7 +55,9 @@ if (hasKeys && !forceSandbox) {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     provider = new GoogleAuthProvider();
-    dbFirestore = getFirestore(app);
+    dbFirestore = firebaseConfig.firestoreDatabaseId 
+      ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+      : getFirestore(app);
     isRealFirebase = true;
     console.log("🔥 Firebase Client Auth & Firestore initialized successfully with project: " + firebaseConfig.projectId);
   } catch (error) {
