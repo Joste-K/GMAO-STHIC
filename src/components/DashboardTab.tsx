@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
-import { AppDatabase, GE } from "../types";
-import { calcGE, recoGE, calcPlan, diffDays, today, pd, fmt } from "../utils/calculations";
+import { AppDatabase, GE, RootCauseAnalysis } from "../types";
+import { calcGE, recoGE, calcPlan, diffDays, today, pd, fmt, todayYMD } from "../utils/calculations";
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
@@ -9,7 +9,7 @@ import { motion } from "motion/react";
 import { 
   Activity, ShieldAlert, AlertTriangle, CheckCircle, 
   Wrench, TrendingUp, Clock, History,
-  Filter, RotateCcw, ChevronDown, Settings, ClipboardList
+  Filter, RotateCcw, ChevronDown, Settings, ClipboardList, Info
 } from "lucide-react";
 
 interface Props {
@@ -212,25 +212,22 @@ export const DashboardTab: React.FC<Props> = ({ db, selectedMonth, onSelectGE, o
   })() : [];
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-4 pb-8">
       {/* Search & Global Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-100 p-2 rounded-lg text-blue-600">
-            <Filter size={20} />
+      <div className="bg-white p-3 rounded-xl shadow-xs border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <div className="bg-slate-950 p-1.5 rounded-lg text-white">
+            <Filter size={16} />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Tableau de Bord</h2>
-              <p className="text-xs text-slate-500 font-medium italic">Analyse des Performance (Pareto, MTBF, MTTR, 5 Whys)</p>
+              <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Tableau de Bord</h2>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Performance (Pareto, MTBF, MTTR, 5 Whys)</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Status Global</p>
-                <div className="flex items-center gap-1.5 justify-end">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-[11px] font-black text-slate-700">OPTIMISÉ</span>
-                </div>
+            <div className="text-right">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-[9px] font-black text-slate-700 uppercase tracking-wider">GMAO-STHIC OPTIMISÉ</span>
               </div>
             </div>
           </div>
@@ -240,14 +237,14 @@ export const DashboardTab: React.FC<Props> = ({ db, selectedMonth, onSelectGE, o
           <select
             value={selectedTech}
             onChange={(e) => setSelectedTech(e.target.value)}
-            className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-black focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-black focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
           >
             <option value="">Tous les techniciens</option>
             {techList.map((tech, i) => <option key={i} value={tech}>{tech}</option>)}
           </select>
           {selectedTech && (
-            <button onClick={() => setSelectedTech("")} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-              <RotateCcw size={18} />
+            <button onClick={() => setSelectedTech("")} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors cursor-pointer bg-slate-100 rounded">
+              <RotateCcw size={14} />
             </button>
           )}
         </div>
@@ -256,9 +253,9 @@ export const DashboardTab: React.FC<Props> = ({ db, selectedMonth, onSelectGE, o
       {selectedTech ? (
         <TechPanel tech={selectedTech} items={techItems} />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Top KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <KPIItem label="Disponibilité" value={`${stats.historicalDispo}%`} icon={TrendingUp} color="green" />
             <KPIItem label="MTBF Moyen" value={`${stats.mtbfHours} h`} icon={Activity} color="blue" />
             <KPIItem label="MTTR Moyen" value={`${stats.mttrHours} h`} icon={Clock} color="amber" />
@@ -266,87 +263,85 @@ export const DashboardTab: React.FC<Props> = ({ db, selectedMonth, onSelectGE, o
           </div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Pareto Chart */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-2">
-                <BarChart size={16} className="text-red-600" />
+            <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200">
+              <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                <TrendingUp size={14} className="text-red-600" />
                 Analyse de Pareto (Top 10 Clients - Pannes)
               </h3>
-              <div className="bg-red-50 p-3 rounded-xl mb-4 border border-red-100">
+              <div className="bg-red-50/50 p-2 rounded-lg mb-3 border border-red-100">
                 <p className="text-[10px] text-red-800 leading-tight">
-                  <span className="font-black">Loi de Pareto (80/20) :</span> 80% des pannes proviennent de 20% des causes. Concentrez vos efforts sur le top 3 ci-dessous pour maximiser la disponibilité de votre parc.
+                  <strong className="font-bold">Loi de Pareto (80/20) :</strong> 80% des arrêts proviennent de 20% des clients. Concentrez les efforts de maintenance préventive sur ces clients stratégiques.
                 </p>
               </div>
-              <div className="h-64">
+              <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.paretoData} layout="vertical">
+                  <BarChart data={stats.paretoData} layout="vertical" margin={{ left: 5, right: 10, top: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                     <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} fontSize={10} width={100} tick={{fill: '#64748b'}} />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} fontSize={9} width={90} tick={{fill: '#475569', fontWeight: 'bold'}} />
                     <Tooltip cursor={{fill: '#f8fafc'}} />
-                    <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={20} />
+                    <Bar dataKey="value" fill="#ef4444" radius={[0, 4, 4, 0]} barSize={14} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
             {/* Maintenance Types Chart */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <Wrench size={16} className="text-blue-600" />
+            <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200">
+              <h3 className="text-xs font-black text-slate-800 mb-4 flex items-center gap-1.5 uppercase tracking-wider">
+                <Wrench size={14} className="text-blue-600" />
                 Répartition des Interventions
               </h3>
-              <div className="h-64">
+              <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={maintenanceTypeData}>
+                  <BarChart data={maintenanceTypeData} margin={{ top: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} tick={{fill: '#64748b'}} />
-                    <YAxis axisLine={false} tickLine={false} fontSize={12} tick={{fill: '#64748b'}} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#475569', fontWeight: 'bold'}} />
+                    <YAxis axisLine={false} tickLine={false} fontSize={10} tick={{fill: '#475569', fontWeight: 'bold'}} />
                     <Tooltip cursor={{fill: '#f8fafc'}} />
-                    <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
+                    <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={30} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* 5 Whys Analysis Tool */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                  <ClipboardList size={16} className="text-indigo-600" />
-                  Méthode des 5 Pourquoi (Analyse Root Cause)
-                </h3>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-xl space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">GE Concerné</label>
+            <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200 space-y-3">
+              <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                <ClipboardList size={14} className="text-indigo-600" />
+                Méthode des 5 Pourquoi (Analyse Root Cause)
+              </h3>
+              <div className="bg-slate-50 p-3 rounded-lg space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-0.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">GE Concerné</label>
                     <select 
                       value={whyGeId}
                       onChange={(e) => setWhyGeId(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-medium text-black outline-none"
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs font-bold text-black outline-none"
                     >
                       <option value="">— Aucun —</option>
                       {db.parc.map(g => <option key={g.id} value={g.id}>{g.id}</option>)}
                     </select>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Problème constaté</label>
+                  <div className="space-y-0.5">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Problème constaté</label>
                     <input 
                       type="text" 
                       placeholder="Ex: Groupe s'arrête après 5 min" 
                       value={whyProblem}
                       onChange={(e) => setWhyProblem(e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-medium text-black focus:ring-2 focus:ring-indigo-500 outline-none" 
+                      className="w-full bg-white border border-slate-200 rounded-lg p-1 text-xs font-bold text-black focus:ring-1 focus:ring-slate-900 outline-none" 
                     />
                   </div>
                 </div>
                 {[1, 2, 3, 4, 5].map(num => (
-                  <div key={num} className="flex gap-3 items-center">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-black shrink-0">{num}</div>
+                  <div key={num} className="flex gap-2 items-center">
+                    <div className="w-6 h-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[9px] font-black shrink-0">{num}</div>
                     <input 
                       type="text" 
                       placeholder={`Pourquoi ? (Cause ${num})`} 
@@ -356,35 +351,35 @@ export const DashboardTab: React.FC<Props> = ({ db, selectedMonth, onSelectGE, o
                         next[num-1] = e.target.value;
                         setWhys(next);
                       }}
-                      className="flex-1 bg-white border border-slate-200 rounded-lg p-2 text-xs font-medium text-black focus:ring-2 focus:ring-indigo-500 outline-none" 
+                      className="flex-1 bg-white border border-slate-200 rounded-lg p-1 text-xs font-medium text-black focus:ring-1 focus:ring-indigo-500 outline-none" 
                     />
                   </div>
                 ))}
-                <div className="pt-2">
-                  <button onClick={handleSaveRootCause} className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer">
-                    <CheckCircle size={14} /> VALIDER L'ANALYSE ET GÉNÉRER L'ACTION
+                <div className="pt-1">
+                  <button onClick={handleSaveRootCause} className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-black transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
+                    <CheckCircle size={12} /> ENREGISTRER L'ANALYSE ROOT CAUSE
                   </button>
                 </div>
               </div>
-              <p className="text-[9px] text-slate-400 italic">Cette méthode permet de remonter à la cause profonde pour éviter la récurrence de la panne.</p>
+              <p className="text-[9px] text-slate-400 italic">Outil méthodologique visant à identifier la source primaire de la défaillance.</p>
             </div>
 
             {/* Health Distribution Chart (Small) */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <Activity size={16} className="text-blue-600" />
+            <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200">
+              <h3 className="text-xs font-black text-slate-800 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                <Activity size={14} className="text-blue-600" />
                 Santé du Parc & Unités Critiques
               </h3>
-              <div className="flex items-center gap-6">
-                <div className="h-40 w-1/2">
+              <div className="flex items-center gap-4">
+                <div className="h-32 w-1/2">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={healthData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={30}
-                        outerRadius={50}
+                        innerRadius={24}
+                        outerRadius={40}
                         paddingAngle={5}
                         dataKey="value"
                       >
@@ -400,28 +395,30 @@ export const DashboardTab: React.FC<Props> = ({ db, selectedMonth, onSelectGE, o
                   {healthData.map((d, i) => (
                     <div key={i} className="flex items-center justify-between text-[10px] font-bold">
                       <span className="text-slate-500">{d.name}</span>
-                      <span className="text-slate-900 px-2 py-0.5 rounded bg-slate-100" style={{color: d.color}}>{d.value}</span>
+                      <span className="text-slate-900 px-1.5 py-0.5 rounded bg-slate-50 font-black" style={{color: d.color}}>{d.value}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Objectives */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <TrendingUp size={16} className="text-blue-600" />
+            <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200 space-y-3">
+              <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                <TrendingUp size={14} className="text-blue-600" />
                 Objectifs de Performance (KPIs)
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {objectives.map((obj, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
                     <div>
-                      <p className="text-xs font-bold text-slate-700">{obj.name}</p>
-                      <p className="text-[10px] text-slate-400">Cible: {obj.target}</p>
+                      <p className="text-[11px] font-bold text-slate-700 leading-tight">{obj.name}</p>
+                      <p className="text-[9px] text-slate-400">Cible: {obj.target}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-black text-slate-900">{obj.current}</p>
+                      <p className="text-xs font-black text-slate-950">{obj.current}</p>
                       {objBadge(obj.status)}
                     </div>
                   </div>
@@ -429,36 +426,71 @@ export const DashboardTab: React.FC<Props> = ({ db, selectedMonth, onSelectGE, o
               </div>
             </div>
 
+            {/* Paramètres Principaux */}
+            <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200 space-y-3">
+              <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                <Settings size={14} className="text-slate-600" />
+                Paramètres Système Principaux
+              </h3>
+              <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                <p className="text-[9px] text-slate-500 leading-tight">
+                  Constantes d'exploitation configurées pour le calcul automatique des échéances de maintenance.
+                </p>
+              </div>
+              <div className="space-y-1 text-[10px]">
+                <div className="flex justify-between items-center p-1 rounded-md bg-white border border-slate-100 shadow-xs">
+                  <span className="font-bold text-slate-600">Seuil de vidange standard</span>
+                  <span className="font-black text-slate-900 bg-slate-50 px-1 py-0.5 rounded text-[9px]">300 Heures</span>
+                </div>
+                <div className="flex justify-between items-center p-1 rounded-md bg-white border border-slate-100 shadow-xs">
+                  <span className="font-bold text-slate-600">Durée de vie batterie max</span>
+                  <span className="font-black text-slate-900 bg-slate-50 px-1 py-0.5 rounded text-[9px]">24 Mois</span>
+                </div>
+                <div className="flex justify-between items-center p-1 rounded-md bg-white border border-slate-100 shadow-xs">
+                  <span className="font-bold text-slate-600">Seuil courroie (&lt;66 kVA)</span>
+                  <span className="font-black text-slate-900 bg-slate-50 px-1 py-0.5 rounded text-[9px]">1000 Heures</span>
+                </div>
+                <div className="flex justify-between items-center p-1 rounded-md bg-white border border-slate-100 shadow-xs">
+                  <span className="font-bold text-slate-600">Seuil courroie (&ge;66 kVA)</span>
+                  <span className="font-black text-slate-900 bg-slate-50 px-1 py-0.5 rounded text-[9px]">2000 Heures</span>
+                </div>
+                <div className="flex justify-between items-center p-1 rounded-md bg-white border border-slate-100 shadow-xs">
+                  <span className="font-bold text-slate-600">Obsolescence relevés</span>
+                  <span className="font-black text-slate-900 bg-slate-50 px-1 py-0.5 rounded text-[9px]">45 Jours</span>
+                </div>
+              </div>
+            </div>
+
             {/* Critical Units */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <ShieldAlert size={16} className="text-red-600" />
+            <div className="bg-white p-4 rounded-xl shadow-xs border border-slate-200 space-y-3">
+              <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                <ShieldAlert size={14} className="text-red-600" />
                 Unités Critiques Prioritaires
               </h3>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1 scrollbar-thin">
                 {stats.alertsList.length > 0 ? (
                   stats.alertsList.slice(0, 8).map((item, i) => (
                     <div 
                       key={i} 
                       onClick={() => onSelectGE(item.g.id)}
-                      className="group flex items-center justify-between p-3 rounded-xl bg-white border border-slate-100 hover:border-red-200 hover:shadow-md transition-all cursor-pointer"
+                      className="group flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 hover:border-red-200 hover:bg-red-50/20 transition-all cursor-pointer"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${item.isCrit ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
-                          <AlertTriangle size={18} />
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${item.isCrit ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                          <AlertTriangle size={14} />
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{item.g.id} — {item.g.client}</p>
-                          <p className="text-[10px] text-slate-400 line-clamp-1">{item.items[0]}</p>
+                          <p className="text-[11px] font-bold text-slate-800 group-hover:text-slate-950 transition-colors leading-none">{item.g.id}</p>
+                          <p className="text-[9px] text-slate-500 line-clamp-1 leading-normal mt-0.5">{item.g.client}</p>
                         </div>
                       </div>
-                      <ChevronDown size={14} className="-rotate-90 text-slate-300" />
+                      <ChevronDown size={12} className="-rotate-90 text-slate-400" />
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12">
-                    <CheckCircle className="mx-auto text-green-500 mb-2" size={32} />
-                    <p className="text-xs text-slate-500 font-medium">Toutes les unités sont opérationnelles</p>
+                  <div className="text-center py-6">
+                    <CheckCircle className="mx-auto text-green-500 mb-1" size={24} />
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Aucune alerte active</p>
                   </div>
                 )}
               </div>

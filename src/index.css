@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Tw Cen MT", "Century Gothic", "Futura", "URW Gothic L", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
   --color-slate-50: #fbfbfb;
@@ -12,19 +12,22 @@
 
 /* Base style resets to enforce clean modern layouts */
 body {
+  font-family: "Tw Cen MT", "Century Gothic", "Futura", "URW Gothic L", sans-serif !important;
+  font-size: 12.5px !important; /* Compact 9pt/10pt size */
   color: #000000 !important;
   background-color: #f8fafc;
 }
 
 input[type="text"], input[type="email"], input[type="number"], input[type="password"], select, textarea {
-  font-size: 13px !important;
-  font-weight: 600 !important;
+  font-family: "Tw Cen MT", "Century Gothic", "Futura", "URW Gothic L", sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   color: #000000 !important;
-  padding-top: 8px !important;
-  padding-bottom: 8px !important;
-  padding-left: 12px !important;
-  padding-right: 12px !important;
-  border-radius: 10px !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  border-radius: 8px !important;
   border-width: 1.5px !important;
   border-color: #cbd5e1 !important;
   background-color: #ffffff !important;
@@ -33,45 +36,60 @@ input[type="text"], input[type="email"], input[type="number"], input[type="passw
 
 input::placeholder {
   color: #64748b !important;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
 }
 
 input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
   outline: none !important;
-  border-color: #2563eb !important;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+  border-color: #0f172a !important;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.15) !important;
 }
 
 button {
+  font-family: "Tw Cen MT", "Century Gothic", "Futura", "URW Gothic L", sans-serif !important;
   transition: all 0.2s ease !important;
 }
 
 table th {
-  font-size: 11px !important;
+  font-family: "Tw Cen MT", "Century Gothic", "Futura", "URW Gothic L", sans-serif !important;
+  font-size: 10px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
-  padding: 8px 14px !important;
+  padding: 6px 12px !important;
 }
 
 table td {
-  font-size: 12px !important;
-  padding: 8px 14px !important;
+  font-family: "Tw Cen MT", "Century Gothic", "Futura", "URW Gothic L", sans-serif !important;
+  font-size: 11px !important;
+  padding: 6px 12px !important;
 }
 
-/* Thin high density scrollbar */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Thick and highly visible custom scrollbar */
+.scrollbar-thin::-webkit-scrollbar,
+::-webkit-scrollbar {
+  width: 12px !important;
+  height: 12px !important;
 }
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: #f1f1f1;
+.scrollbar-thin::-webkit-scrollbar-track,
+::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 8px !important;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+.scrollbar-thin::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb {
+  background: #64748b !important; /* Darker slate for high contrast */
+  border-radius: 8px !important;
+  border: 3px solid #f1f5f9 !important;
 }
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.scrollbar-thin::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:hover {
+  background: #1e293b !important; /* Slate 800 on hover */
+}
+
+/* Ensure body allows scrolling */
+html, body {
+  scrollbar-width: auto !important;
+  scrollbar-color: #64748b #f1f5f9 !important;
 }
 
 /* Repeating diagonal stripe patterns for the visual timeline inspired by Huoltu */

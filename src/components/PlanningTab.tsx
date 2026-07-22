@@ -2,6 +2,11 @@ import React, { useState } from "react";
 import * as XLSX from "xlsx";
 import { AppDatabase, PlanningItem, Anomalie } from "../types";
 import { calcPlan, fmt, today, todayYMD, pd } from "../utils/calculations";
+import { 
+  Search, Calendar, Filter, Download, Upload, Plus, RefreshCw, 
+  Settings, Sparkles, Trash2, Play, CheckCircle2, AlertTriangle, 
+  FileSpreadsheet, HelpCircle, ArrowRight, Check, X, Layers, Clock, Info, CheckCircle
+} from "lucide-react";
 
 interface Props {
   db: AppDatabase;
@@ -40,6 +45,11 @@ export const PlanningTab: React.FC<Props> = ({
   const [filtStatut, setFiltStatut] = useState("");
   const [filtFrom, setFiltFrom] = useState("");
   const [filtTo, setFiltTo] = useState("");
+
+  // Excel Sync states
+  const [importPreviewItems, setImportPreviewItems] = useState<PlanningItem[] | null>(null);
+  const [importFilename, setImportFilename] = useState("");
+  const [isDraggingExcel, setIsDraggingExcel] = useState(false);
 
   // Modals for Actions
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
@@ -127,6 +137,7 @@ export const PlanningTab: React.FC<Props> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setImportFilename(file.name);
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
@@ -137,35 +148,35 @@ export const PlanningTab: React.FC<Props> = ({
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[];
 
         if (!rows.length) {
-          alert("Fichier vide.");
+          alert("Fichier vide ou corrompu.");
           return;
         }
 
         // Find header row containing client/date
         let headerIdx = -1;
-        for (let i = 0; i < Math.min(rows.length, 8); i++) {
-          const rowStr = rows[i].map((x: any) => String(x).toLowerCase()).join(" ");
-          if (rowStr.includes("client") || rowStr.includes("date")) {
+        for (let i = 0; i < Math.min(rows.length, 12); i++) {
+          const rowStr = (rows[i] || []).map((x: any) => String(x).toLowerCase()).join(" ");
+          if (rowStr.includes("client") || rowStr.includes("date") || rowStr.includes("ge") || rowStr.includes("site")) {
             headerIdx = i;
             break;
           }
         }
 
+        // Fallback: if no header found, assume row 0 is header
         if (headerIdx === -1) {
-          alert("Impossible de trouver une ligne d'en-tête contenant 'Client' ou 'Date'.");
-          return;
+          headerIdx = 0;
         }
 
-        const headers = rows[headerIdx].map((h: any) => String(h).trim().toLowerCase());
-        const dateCol = headers.findIndex((h: string) => h.includes("date") || h.includes("prév") || h.includes("planif"));
-        const clientCol = headers.findIndex((h: string) => h.includes("client"));
-        const siteCol = headers.findIndex((h: string) => h.includes("site") || h.includes("lieu"));
-        const geCol = headers.findIndex((h: string) => h.includes("ge") || h.includes("groupe") || h.includes("equip") || h.includes("matricule"));
-        const techCol = headers.findIndex((h: string) => h.includes("tech") || h.includes("intervenant"));
-        const noteCol = headers.findIndex((h: string) => h.includes("note") || h.includes("obs"));
+        const headers = (rows[headerIdx] || []).map((h: any) => String(h || "").trim().toLowerCase());
+        const dateCol = headers.findIndex((h: string) => h.includes("date") || h.includes("prév") || h.includes("planif") || h.includes("jour"));
+        const clientCol = headers.findIndex((h: string) => h.includes("client") || h.includes("société"));
+        const siteCol = headers.findIndex((h: string) => h.includes("site") || h.includes("lieu") || h.includes("ville"));
+        const geCol = headers.findIndex((h: string) => h.includes("ge") || h.includes("groupe") || h.includes("equip") || h.includes("matricule") || h.includes("code"));
+        const techCol = headers.findIndex((h: string) => h.includes("tech") || h.includes("intervenant") || h.includes("agent"));
+        const noteCol = headers.findIndex((h: string) => h.includes("note") || h.includes("obs") || h.includes("comment"));
 
-        if (dateCol === -1 || clientCol === -1) {
-          alert("Les colonnes 'Date' et 'Client' sont requises.");
+        if (clientCol === -1) {
+          alert("La colonne 'Client' est introuvable. Veuillez vérifier que votre fichier Excel contient un en-tête avec 'Client' ou 'Société'.");
           return;
         }
 
@@ -174,7 +185,7 @@ export const PlanningTab: React.FC<Props> = ({
           const row = rows[i];
           if (!row || row.every((c: any) => c === "" || c == null)) continue;
 
-          let rawDate = row[dateCol];
+          let rawDate = dateCol >= 0 ? row[dateCol] : "";
           let formattedDate = "";
           if (rawDate) {
             if (rawDate instanceof Date) {
@@ -197,23 +208,24 @@ export const PlanningTab: React.FC<Props> = ({
           }
 
           items.push({
-            date: formattedDate || null,
+            date: formattedDate || todayYMD(),
             client: String(row[clientCol] || "").trim(),
-            site: siteCol >= 0 ? String(row[siteCol] || "").trim() : "",
+            site: siteCol >= 0 ? String(row[siteCol] || "").trim() : "SITE",
             ge: geCol >= 0 ? String(row[geCol] || "").trim() : "",
             tech: techCol >= 0 ? String(row[techCol] || "").trim() : "",
-            note: noteCol >= 0 ? String(row[noteCol] || "").trim() : "",
+            note: noteCol >= 0 ? String(row[noteCol] || "").trim() : "Importé via Excel",
             exec: null
           });
         }
 
-        if (confirm(`Importer ${items.length} lignes ? OK pour remplacer le planning, Annuler pour ajouter.`)) {
-          onReplacePlan(items);
-        } else {
-          onAppendPlan(items);
+        if (items.length === 0) {
+          alert("Aucune donnée valide n'a pu être extraite après l'en-tête de votre fichier.");
+          return;
         }
+
+        setImportPreviewItems(items);
       } catch (err: any) {
-        alert("Erreur de lecture : " + err.message);
+        alert("Erreur de lecture du fichier : " + err.message);
       }
       e.target.value = "";
     };
@@ -332,134 +344,202 @@ export const PlanningTab: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          placeholder="🔎 Planning par client, site, technicien, GE…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 min-w-[240px] px-4 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black focus:outline-none focus:border-blue-500"
-        />
-        <select
-          value={filtType}
-          onChange={(e) => setFiltType(e.target.value)}
-          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black font-semibold focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
-        >
-          <option value="">Tous les types</option>
-          <option value="Préventive">🛡️ Préventive</option>
-          <option value="Corrective">🛠️ Corrective</option>
-          <option value="Vidange">🛢️ Vidange</option>
-          <option value="Curative">🚑 Curative</option>
-          <option value="Expertise">🔬 Expertise</option>
-          <option value="Autre">📝 Autre</option>
-        </select>
-        <select
-          value={filtTech}
-          onChange={(e) => setFiltTech(e.target.value)}
-          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black font-semibold focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
-        >
-          <option value="">Tous techniciens</option>
-          {techList.map((t, i) => (
-            <option key={i}>{t}</option>
-          ))}
-        </select>
-        <select
-          value={filtStatut}
-          onChange={(e) => setFiltStatut(e.target.value)}
-          className="px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm text-black font-semibold focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
-        >
-          <option value="">Tous statuts</option>
-          <option value="fait">✅ Exécuté</option>
-          <option value="avance">⏩ Fait en avance</option>
-          <option value="retard_fait">⚠️ Fait en retard</option>
-          <option value="retard">🔴 En retard</option>
-          <option value="prevu">🟠 Planifié</option>
-          <option value="arret">⏸️ En arrêt contrat</option>
-        </select>
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-          <span>Du</span>
-          <input
-            type="date"
-            value={filtFrom}
-            onChange={(e) => setFiltFrom(e.target.value)}
-            className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg text-black focus:outline-none focus:border-blue-500"
-          />
-          <span>au</span>
-          <input
-            type="date"
-            value={filtTo}
-            onChange={(e) => setFiltTo(e.target.value)}
-            className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg text-black focus:outline-none focus:border-blue-500"
-          />
-        </div>
-        <button
-          onClick={() => {
-            setFiltFrom(todayYMD());
-            setFiltTo(todayYMD());
-          }}
-          className="px-4 py-2 border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg text-sm font-semibold cursor-pointer"
-        >
-          📅 Aujourd'hui
-        </button>
-        {(filtFrom || filtTo) && (
-          <button
-            onClick={() => {
-              setFiltFrom("");
-              setFiltTo("");
-            }}
-            className="p-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-500 cursor-pointer"
-            title="Effacer filtres dates"
-          >
-            ✕
-          </button>
-        )}
-      </div>
+      {/* Modern Filter Cockpit & Excel Sync Hub */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* FILTRES COCKPIT (Left card - 7 cols) */}
+        <div className="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-4 h-4 text-slate-800" />
+              <h3 className="font-black text-black text-xs uppercase tracking-wider">Filtres du Planning & Moteur de Recherche</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Recherche client, site, tech, GE..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border border-slate-200 bg-slate-50/50 rounded-xl text-xs font-bold text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white transition-all"
+                />
+              </div>
 
-      {/* Primary Actions bar */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setShowAddPlanModal(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold cursor-pointer transition-colors"
-        >
-          ➕ Ajouter au planning
-        </button>
-        <button
-          onClick={handleProjVidanges}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold cursor-pointer transition-colors"
-          title="Générer les vidanges prévues du mois selon les échéances"
-        >
-          🔮 Projeter vidanges
-        </button>
-        <button
-          onClick={onEclaterMultiGE}
-          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-bold cursor-pointer transition-colors"
-          title="Transforme une visite multi-GE en lignes individuelles par GE"
-        >
-          🔧 Éclater visites multi-GE
-        </button>
-        <button
-          onClick={() => setShowGenMaintModal(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold cursor-pointer transition-colors"
-          title="Crée 1 maintenance par GE pour un client/site, récurrente"
-        >
-          📅 Générer maintenances
-        </button>
-        <label className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-bold cursor-pointer transition-colors">
-          📥 Importer planning (Excel/CSV)
-          <input
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            style={{ display: "none" }}
-            onChange={handleImport}
-          />
-        </label>
-        <button
-          onClick={downloadTemplate}
-          className="px-4 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-bold cursor-pointer transition-colors"
-        >
-          📄 Modèle d'import
-        </button>
+              {/* Type */}
+              <select
+                value={filtType}
+                onChange={(e) => setFiltType(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 bg-slate-50/50 rounded-xl text-xs font-black text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white cursor-pointer transition-all"
+              >
+                <option value="">Tous les types d'intervention</option>
+                <option value="Préventive">🛡️ Préventive</option>
+                <option value="Corrective">🛠️ Corrective</option>
+                <option value="Vidange">🛢️ Vidange</option>
+                <option value="Curative">🚑 Curative</option>
+                <option value="Expertise">🔬 Expertise</option>
+                <option value="Autre">📝 Autre</option>
+              </select>
+
+              {/* Tech */}
+              <select
+                value={filtTech}
+                onChange={(e) => setFiltTech(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 bg-slate-50/50 rounded-xl text-xs font-black text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white cursor-pointer transition-all"
+              >
+                <option value="">Tous les techniciens</option>
+                {techList.map((t, i) => (
+                  <option key={i} value={t}>🧑‍🔧 {t}</option>
+                ))}
+              </select>
+
+              {/* Statut */}
+              <select
+                value={filtStatut}
+                onChange={(e) => setFiltStatut(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 bg-slate-50/50 rounded-xl text-xs font-black text-black focus:outline-none focus:ring-2 focus:ring-slate-900 focus:bg-white cursor-pointer transition-all"
+              >
+                <option value="">Tous les statuts d'exécution</option>
+                <option value="fait">✅ Exécuté</option>
+                <option value="avance">⏩ Fait en avance</option>
+                <option value="retard_fait">⚠️ Fait en retard</option>
+                <option value="retard">🔴 En retard</option>
+                <option value="prevu">🟠 Planifié</option>
+                <option value="arret">⏸️ En arrêt contrat</option>
+              </select>
+            </div>
+
+            {/* Date Picker Range */}
+            <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                <Calendar className="w-4 h-4 text-slate-500" />
+                <span>Période du</span>
+                <input
+                  type="date"
+                  value={filtFrom}
+                  onChange={(e) => setFiltFrom(e.target.value)}
+                  className="px-2 py-1 border border-slate-200 bg-white rounded-lg text-black focus:outline-none focus:ring-1 focus:ring-slate-900 text-xs"
+                />
+                <span>au</span>
+                <input
+                  type="date"
+                  value={filtTo}
+                  onChange={(e) => setFiltTo(e.target.value)}
+                  className="px-2 py-1 border border-slate-200 bg-white rounded-lg text-black focus:outline-none focus:ring-1 focus:ring-slate-900 text-xs"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    setFiltFrom(todayYMD());
+                    setFiltTo(todayYMD());
+                  }}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-xs"
+                >
+                  Aujourd'hui
+                </button>
+                {(filtFrom || filtTo) && (
+                  <button
+                    onClick={() => {
+                      setFiltFrom("");
+                      setFiltTo("");
+                    }}
+                    className="p-1.5 border border-slate-200 hover:bg-white rounded-lg text-slate-500 hover:text-black cursor-pointer bg-white shadow-xs"
+                    title="Réinitialiser les dates"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ECOSYSTEME EXCEL SYNC & ACTIONS MASSE (Right card - 5 cols) */}
+        <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+                <h3 className="font-black text-black text-xs uppercase tracking-wider">Synchronisation Excel</h3>
+              </div>
+              <button
+                onClick={downloadTemplate}
+                className="text-[10px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-wider cursor-pointer"
+                title="Télécharger la structure Excel type pour votre import"
+              >
+                <Download className="w-3 h-3" /> Modèle d'import
+              </button>
+            </div>
+
+            {/* Interactive Drag & Drop Area */}
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDraggingExcel(true);
+              }}
+              onDragLeave={() => setIsDraggingExcel(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingExcel(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) {
+                  const fakeEvent = {
+                    target: { files: [file], value: "" }
+                  } as unknown as React.ChangeEvent<HTMLInputElement>;
+                  handleImport(fakeEvent);
+                }
+              }}
+              className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
+                isDraggingExcel
+                  ? "border-blue-600 bg-blue-50/60 scale-[1.02]"
+                  : "border-slate-200 hover:border-blue-500 hover:bg-slate-50/50"
+              }`}
+            >
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <div className="p-2 bg-blue-50 rounded-full text-blue-600 mb-2">
+                <Upload className="w-4 h-4 animate-bounce" />
+              </div>
+              <p className="text-xs font-black text-slate-800">Glissez votre Excel ici ou Cliquez</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Format .xlsx, .xls, .csv supporté</p>
+            </label>
+          </div>
+
+          {/* Quick Core Operations Grid */}
+          <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-100">
+            <button
+              onClick={() => setShowAddPlanModal(true)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-black cursor-pointer shadow-xs transition-transform hover:-translate-y-0.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> Nouveau Plan
+            </button>
+            <button
+              onClick={handleProjVidanges}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black cursor-pointer shadow-xs transition-transform hover:-translate-y-0.5"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Projeter Vidanges
+            </button>
+            <button
+              onClick={onEclaterMultiGE}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs font-black cursor-pointer shadow-xs transition-transform hover:-translate-y-0.5"
+            >
+              <Layers className="w-3.5 h-3.5" /> Éclater Multi-GE
+            </button>
+            <button
+              onClick={() => setShowGenMaintModal(true)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black cursor-pointer shadow-xs transition-transform hover:-translate-y-0.5"
+            >
+              <Calendar className="w-3.5 h-3.5" /> Générer Rituels
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Main Table */}
@@ -904,6 +984,130 @@ export const PlanningTab: React.FC<Props> = ({
             <div className="bg-slate-50 px-6 py-4 flex justify-end gap-2 border-t">
               <button onClick={() => setShowGenMaintModal(false)} className="px-4 py-2 border rounded-lg text-sm font-semibold bg-white hover:bg-slate-100 cursor-pointer">Annuler</button>
               <button onClick={handleGenMaintenances} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold cursor-pointer">Générer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Excel Sync Preview Modal */}
+      {importPreviewItems && importPreviewItems.length > 0 && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-100">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-blue-900 text-white px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-blue-200" />
+                <h3 className="font-black text-md tracking-tight uppercase">Synchronisation du Planning Excel</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setImportPreviewItems(null);
+                  setImportFilename("");
+                }} 
+                className="text-white hover:text-slate-200 text-2xl font-bold cursor-pointer"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
+                <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-black text-blue-900 uppercase">Analyse du fichier réussie</h4>
+                  <p className="text-xs text-blue-800 mt-1 leading-relaxed">
+                    Le fichier <strong className="font-bold">{importFilename}</strong> a été lu avec succès. Nous avons extrait <strong className="font-black">{importPreviewItems.length} lignes d'interventions</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Aperçu des 5 premières lignes détectées</span>
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Client</th>
+                        <th className="px-3 py-2">Site</th>
+                        <th className="px-3 py-2">GE</th>
+                        <th className="px-3 py-2">Technicien</th>
+                        <th className="px-3 py-2">Note / Type</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+                      {importPreviewItems.slice(0, 5).map((item, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50">
+                          <td className="px-3 py-2 text-slate-900 font-bold">{item.date || "—"}</td>
+                          <td className="px-3 py-2 text-slate-900 font-black">{item.client}</td>
+                          <td className="px-3 py-2">{item.site}</td>
+                          <td className="px-3 py-2 font-mono text-[10px] text-blue-600">{item.ge || "—"}</td>
+                          <td className="px-3 py-2">{item.tech || "—"}</td>
+                          <td className="px-3 py-2 max-w-[120px] truncate">{item.note}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {importPreviewItems.length > 5 && (
+                  <p className="text-[11px] text-slate-400 mt-2 text-right italic font-medium">
+                    + {importPreviewItems.length - 5} autres lignes non affichées dans l'aperçu...
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Méthode d'intégration au Planning global :</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <button
+                    onClick={() => {
+                      onAppendPlan(importPreviewItems);
+                      alert(`✅ Importation réussie : ${importPreviewItems.length} lignes ajoutées.`);
+                      setImportPreviewItems(null);
+                      setImportFilename("");
+                    }}
+                    className="flex flex-col items-start p-3 bg-white hover:bg-slate-100/50 rounded-xl border border-slate-200 hover:border-slate-400 text-left cursor-pointer transition-all shadow-xs"
+                  >
+                    <span className="text-xs font-black text-blue-700 flex items-center gap-1">
+                      <Plus className="w-3.5 h-3.5" /> FUSIONNER & AJOUTER
+                    </span>
+                    <span className="text-[10px] text-slate-500 mt-1 leading-tight">
+                      Conserve le planning existant et ajoute les nouvelles lignes à la suite. Recommandé.
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (confirm("⚠️ Attention : cette action va écraser et supprimer tout le planning actuel pour le remplacer par celui de votre fichier Excel. Voulez-vous continuer ?")) {
+                        onReplacePlan(importPreviewItems);
+                        alert(`✅ Synchronisation réussie : le planning a été entièrement remplacé par le fichier Excel.`);
+                        setImportPreviewItems(null);
+                        setImportFilename("");
+                      }
+                    }}
+                    className="flex flex-col items-start p-3 bg-white hover:bg-slate-100/50 rounded-xl border border-slate-200 hover:border-slate-400 text-left cursor-pointer transition-all shadow-xs"
+                  >
+                    <span className="text-xs font-black text-red-600 flex items-center gap-1">
+                      <RefreshCw className="w-3.5 h-3.5" /> ÉCRASER & REMPLACER
+                    </span>
+                    <span className="text-[10px] text-slate-500 mt-1 leading-tight">
+                      Supprime le planning actuel et le remplace par les données exactes du fichier importé.
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 px-6 py-4 flex justify-end gap-2 border-t">
+              <button 
+                onClick={() => {
+                  setImportPreviewItems(null);
+                  setImportFilename("");
+                }} 
+                className="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 cursor-pointer"
+              >
+                Annuler l'importation
+              </button>
             </div>
           </div>
         </div>

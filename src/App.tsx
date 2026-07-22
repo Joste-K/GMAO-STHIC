@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { AppDatabase, GE, Intervention, PlanningItem, Task, ArticleMagasin, Materiel, Vente, Bilan, Anomalie } from "./types";
+import { AppDatabase, GE, Intervention, PlanningItem, Task, ArticleMagasin, Materiel, Vente, Bilan, Anomalie, RootCauseAnalysis } from "./types";
 import {
   SEED_PARC,
   SEED_INTER,
@@ -28,6 +28,7 @@ import { LoginView } from "./components/LoginView";
 import { GEModal } from "./components/GEModal";
 import { AuthManager, CloudManager, UserProfile } from "./utils/firebase";
 import { calcGE, todayYMD } from "./utils/calculations";
+import { askJosteExpert } from "./utils/josteExpertEngine";
 
 // Lucide icons
 import {
@@ -305,7 +306,7 @@ export default function App() {
   const [ottoMessages, setOttoMessages] = useState<Array<{ sender: "user" | "otto"; text: string; time: string }>>([
     {
       sender: "otto",
-      text: "👋 Bonjour ! Je suis Joste, votre assistant intelligent de la GMAO-STHIC. Je suis là pour vous accompagner en temps réel ! Vous pouvez me demander de lister les sites, de diagnostiquer une panne de groupe, ou de consulter les seuils de vidange. Comment puis-je vous aider ?",
+      text: "👋 Bonjour ! Je suis Joste, votre Ingénieur Expert de la GMAO STHIC SERVICES (Groupes Électrogènes, Moteurs Perkins/SDMO, Alternateurs AVR, Diagnostics Electromécaniques & Magasin).\n\nJ'analyse en temps réel l'ensemble de votre base de données. Posez-moi une question sur une machine, un diagnostic de panne, ou demandez-moi un **audit critique global** de la maintenance !",
       time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
     }
   ]);
@@ -340,43 +341,35 @@ export default function App() {
     });
   };
 
-  const handleSendToOtto = () => {
-    if (!ottoInput.trim()) return;
+  const handleSendToOtto = async (customPrompt?: string) => {
+    const textToSend = customPrompt || ottoInput;
+    if (!textToSend.trim()) return;
 
-    const userMsg = ottoInput.trim();
+    const userMsg = textToSend.trim();
     const currentTime = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 
     // Append user message
     setOttoMessages(prev => [...prev, { sender: "user", text: userMsg, time: currentTime }]);
-    setOttoInput("");
+    if (!customPrompt) setOttoInput("");
     setOttoTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      let reply = "";
-      const lower = userMsg.toLowerCase();
-
-      if (lower.includes("site") || lower.includes("excel") || lower.includes("fichier") || lower.includes("contrôler")) {
-        const totalSites = db.parc.length;
-        const excelLinked = Object.keys(CONTENTKVA).length;
-        reply = `📊 **Audit de Cohérence des Données Excel :**\n\nJ'ai analysé l'intégralité des sites du fichier Excel d'origine (\`Ets_TECNOSTREAM_POWER.xlsx\`) configurés dans le dictionnaire de puissance \`CONTENTKVA\`. \n\n* **Données Excel d'Origine (CONTENTKVA)** : **${excelLinked}** sites répertoriés.\n* **Base de l'Application (SEED_PARC)** : **${totalSites}** groupes électrogènes enregistrés.\n\n✅ **Résultat de l'Audit** : Tous les sites du fichier Excel d'origine font partie intégrante de cette application. Les valeurs de puissance nominale (kVA) ont été rigoureusement synchronisées pour chaque machine !`;
-      } else if (lower.includes("panne") || lower.includes("urgence") || lower.includes("urgente") || lower.includes("p1")) {
-        const activeUrgent = db.taches.filter(t => t.prio === "P1" && t.statut !== "Terminé");
-        reply = `🚨 **Suivi des Urgences GMAO :**\n\nNous recensons actuellement **${activeUrgent.length}** intervention(s) critique(s) active(s).\n\nPour une visibilité optimale, les interventions de priorité **P1** sont signalées par un badge **vif rouge "Urgente"** clignotant dans la liste des tâches (onglet **"Interventions"**).`;
-      } else if (lower.includes("vidange") || lower.includes("preventive") || lower.includes("planning") || lower.includes("heures")) {
-        reply = `🔧 **Planification & Maintenance Préventive :**\n\nLes alertes de vidange se déclenchent à l'approche du seuil de fonctionnement de **250 heures** (ou **350 heures** pour les moteurs industriels renforcés). Retrouvez toutes les échéances prédictives dans l'onglet **"Planning & Abos"** ou sous forme de diagrammes de charge dans le **"Bilan Global"**.`;
-      } else if (lower.includes("magasin") || lower.includes("stock") || lower.includes("piece")) {
-        const lowStock = db.magasin.filter(item => item.qte <= (item.seuilMin || 5));
-        reply = `📦 **Gestion des Pièces & Consommables :**\n\nLe magasin de Pointe-Noire contient **${db.magasin.length} références** actives de filtres, huiles moteurs et batteries.\n\n⚠️ **Alerte réapprovisionnement** : **${lowStock.length}** pièces sont sous le seuil critique d'alerte. Vous pouvez émettre des bons de sortie ou d'entrée dans l'onglet **"Gestion Magasin"**.`;
-      } else if (lower.includes("design") || lower.includes("couleur") || lower.includes("interface") || lower.includes("charte")) {
-        reply = `🎨 **Charte Graphique & Ergonomie :**\n\nL'application intègre une interface moderne et hautement optimisée :\n- **Sidebar Haute-Fidélité Blanche** avec un badge de logo exclusif "GSJ" aux tons bleu et ardoise.\n- **Timeline Graphique Diagonale Rayée** pour le suivi visuel dynamique (En cours / Planifiée).\n- **Bouton d'interaction Joste** avec notification badge \`26\` en haut à droite.\n- **Drawer Contextuel d'Actions Rapides** pour clôturer, éditer ou consigner des messages d'interventions d'un clic !`;
-      } else {
-        reply = `🤖 **Joste Assistant GMAO :**\n\nJe suis entraîné pour superviser la flotte de groupes électrogènes de Pointe-Noire.\n\nN'hésitez pas à me poser une question sur :\n- Les **"sites"** ou le **"fichier Excel"** (audit de données)\n- Les **"pannes"** ou les **"urgences"**\n- Les **"stocks"** du magasin\n- Le **"design"** ou la charte ergonomique de l'interface !`;
-      }
-
-      setOttoMessages(prev => [...prev, { sender: "otto", text: reply, time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) }]);
+    try {
+      const reply = await askJosteExpert(userMsg, db, ottoMessages);
+      const replyTime = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      setOttoMessages(prev => [...prev, { sender: "otto", text: reply, time: replyTime }]);
+    } catch (err: any) {
+      console.error("Joste assistant error:", err);
+      setOttoMessages(prev => [
+        ...prev,
+        {
+          sender: "otto",
+          text: "⚠️ Désolé, une erreur est survenue lors de l'analyse. Veuillez réessayer.",
+          time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+        }
+      ]);
+    } finally {
       setOttoTyping(false);
-    }, 850);
+    }
   };
 
   useEffect(() => {
@@ -416,11 +409,14 @@ export default function App() {
   };
 
   const handleSyncCloud = async () => {
-    // Mode Expert : Synchronisation forcée avec le catalogue Excel
-    setDb(prev => {
-      const existingKeys = new Set(prev.parc.map(g => `${g.client}|${g.site}|${g.marque}`.toUpperCase()));
+    try {
+      // 1. Get the current local database
+      const localDb = db;
+      
+      // 2. Perform Excel Catalog/Seed merge on the local database
+      const existingKeys = new Set(localDb.parc.map(g => `${g.client}|${g.site}|${g.marque}`.toUpperCase()));
       const missingFromCatalog: GE[] = [];
-      let nextId = Math.max(...prev.parc.map(g => parseInt(g.id.replace(/\D/g, "") || "0"))) + 1;
+      let nextId = Math.max(...localDb.parc.map(g => parseInt(g.id.replace(/\D/g, "") || "0"))) + 1;
       if (isNaN(nextId) || nextId < 500) nextId = 500;
 
       for (const key in CONTENTKVA) {
@@ -442,44 +438,91 @@ export default function App() {
         }
       }
 
-      const existingPlanKeys = new Set(prev.plan.map(p => `${p.date}|${p.ge || p.site}|${p.note}`));
+      const existingPlanKeys = new Set(localDb.plan.map(p => `${p.date}|${p.ge || p.site}|${p.note}`));
       const missingPlan = SEED_PLAN.filter(p => !existingPlanKeys.has(`${p.date}|${p.ge || p.site}|${p.note}`));
 
-      if (missingFromCatalog.length === 0 && missingPlan.length === 0) {
-        alert("📊 Votre base de données est déjà synchronisée avec le catalogue Excel.");
-        return prev;
-      }
-
-      const newDb = {
-        ...prev,
-        parc: [...prev.parc, ...missingFromCatalog],
-        plan: [...prev.plan, ...missingPlan]
+      const baseLocalMerged: AppDatabase = {
+        ...localDb,
+        parc: [...localDb.parc, ...missingFromCatalog],
+        plan: [...localDb.plan, ...missingPlan]
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newDb));
-      return newDb;
-    });
-    
-    alert("✅ Synchronisation réussie !\nLes données du catalogue Excel ont été fusionnées.");
 
-    if (!user) return;
-    
-    // Si connecté, on fait aussi la synchro Cloud
-    try {
-      const data = await CloudManager.loadFromCloud(user.uid);
-      if (data) {
-        if (data.parc && data.inter && data.plan && data.taches) {
-          setDb(data);
-          // Update last sync date metadata
-          const nowStr = new Date().toLocaleString("fr-FR");
-          localStorage.setItem(`sthic_last_sync_date_${user.uid}`, nowStr);
-          alert("Base de données synchronisée avec le Cloud !");
+      // 3. Fetch latest database from the Cloud
+      let finalDb = baseLocalMerged;
+      let cloudFound = false;
+
+      if (user) {
+        const cloudDb = await CloudManager.loadFromCloud(user.uid);
+        if (cloudDb && cloudDb.parc && cloudDb.inter && cloudDb.plan && cloudDb.taches) {
+          cloudFound = true;
+          
+          // Merge local merged database with cloud database
+          const mergeArray = <T,>(
+            localArr: T[] | undefined,
+            cloudArr: T[] | undefined,
+            getKey: (item: T) => string
+          ): T[] => {
+            const l = localArr || [];
+            const c = cloudArr || [];
+            const map = new Map<string, T>();
+            // Add cloud items first
+            c.forEach(item => {
+              map.set(getKey(item), item);
+            });
+            // Overwrite/Add local items (local items are newer/modified on this device)
+            l.forEach(item => {
+              map.set(getKey(item), item);
+            });
+            return Array.from(map.values());
+          };
+
+          finalDb = {
+            parc: mergeArray(baseLocalMerged.parc, cloudDb.parc, (g) => g.id),
+            inter: mergeArray(baseLocalMerged.inter, cloudDb.inter, (i) => `${i.client || ''}|${i.site || ''}|${i.ge || ''}|${i.ddeb || ''}`),
+            plan: mergeArray(baseLocalMerged.plan, cloudDb.plan, (p) => `${p.date || ''}|${p.ge || ''}|${p.client || ''}|${p.site || ''}`),
+            anomalies: mergeArray(baseLocalMerged.anomalies, cloudDb.anomalies, (a) => a.id),
+            taches: mergeArray(baseLocalMerged.taches, cloudDb.taches, (t) => t.id),
+            materiel: mergeArray(baseLocalMerged.materiel, cloudDb.materiel, (m) => m.code),
+            magasin: mergeArray(baseLocalMerged.magasin, cloudDb.magasin, (a) => a.ref),
+            mouvements: mergeArray(baseLocalMerged.mouvements, cloudDb.mouvements, (mv) => `${mv.date || ''}|${mv.ref || ''}|${mv.note || ''}`),
+            ventes: mergeArray(baseLocalMerged.ventes, cloudDb.ventes, (v) => `${v.date || ''}|${v.ref || ''}|${v.qte || ''}`),
+            abos: mergeArray(baseLocalMerged.abos, cloudDb.abos, (ab) => `${ab.client || ''}|${ab.type || ''}`),
+            bilans: mergeArray(baseLocalMerged.bilans, cloudDb.bilans, (b) => b.id),
+            rootCauses: mergeArray(baseLocalMerged.rootCauses, cloudDb.rootCauses, (rc) => rc.id),
+            magasinCats: Array.from(new Set([...(baseLocalMerged.magasinCats || []), ...(cloudDb.magasinCats || [])])),
+            magasinUnites: Array.from(new Set([...(baseLocalMerged.magasinUnites || []), ...(cloudDb.magasinUnites || [])]))
+          };
         }
-      } else {
-        alert("Aucune donnée Cloud trouvée.");
       }
+
+      // 4. Save the merged DB back to the cloud (so technicians can download/access it)
+      if (user) {
+        await CloudManager.saveToCloud(user.uid, finalDb);
+        // Store last sync metadata
+        const nowStr = new Date().toLocaleString("fr-FR");
+        localStorage.setItem(`sthic_last_sync_date_${user.uid}`, nowStr);
+      }
+
+      // 5. Update state and local storage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(finalDb));
+      setDb(finalDb);
+
+      const isReal = AuthManager.isRealFirebase();
+      let msg = "✅ Synchronisation réussie !\n\n";
+      msg += `• Fusion du catalogue Excel d'origine effectuée.\n`;
+      if (user) {
+        msg += cloudFound 
+          ? `• Données fusionnées avec succès avec la sauvegarde existante sur le Cloud.\n`
+          : `• Première sauvegarde créée sur le Cloud avec succès.\n`;
+        msg += isReal 
+          ? `• Données stockées en toute sécurité sur Firebase Firestore (partagées avec vos techniciens).\n`
+          : `• Données stockées localement en mode Sandbox (simulation).\n`;
+      }
+      alert(msg);
+
     } catch (err: any) {
       console.error("Sync error:", err);
-      alert("Erreur de synchronisation Cloud : " + err.message);
+      alert("⚠️ Erreur lors de la synchronisation : " + err.message);
     }
   };
 
@@ -941,12 +984,12 @@ export default function App() {
     { id: "mensuel", label: "Suivi Mensuel", icon: CalendarDays, category: "clients" },
     { id: "sizing", label: "Bilans & Sizing", icon: Calculator, category: "clients" },
     { id: "interventions", label: "Interventions", icon: ClipboardList, category: "chantiers" },
-    { id: "rapports", label: "Rapports imprimables", icon: Printer, category: "chantiers" },
+    { id: "rapports", label: "Rapports & Impressions", icon: Printer, category: "chantiers" },
     { id: "magasin", label: "Magasin & Pièces", icon: PackageCheck, category: "logistique" },
     { id: "materiel", label: "Matériel & Flotte", icon: Truck, category: "logistique" },
     { id: "ventes", label: "Factures & Ventes", icon: DollarSign, category: "commerce" },
     { id: "guide", label: "Guide Technique", icon: BookOpen, category: "infos" },
-    { id: "data", label: "Sauvegardes / Cloud", icon: Database, category: "infos" }
+    { id: "data", label: "Données & Sauvegardes", icon: Database, category: "infos" }
   ];
 
   const categories = [
@@ -1514,24 +1557,36 @@ export default function App() {
             </div>
 
             {/* Quick Prompts footer */}
-            <div className="px-4 py-2 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-1.5 shrink-0">
+            <div className="px-3 py-2 bg-slate-100 border-t border-slate-200 flex flex-wrap gap-1.5 shrink-0">
               <button
-                onClick={() => { setOttoInput("Contrôler la conformité des sites d'origine"); }}
-                className="text-[10px] font-bold bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"
+                onClick={() => { handleSendToOtto("Fais un audit critique global de toute la maintenance"); }}
+                className="text-[10px] font-bold bg-white text-blue-700 border border-blue-200 px-2 py-1 rounded-lg hover:bg-blue-50 cursor-pointer shadow-2xs"
               >
-                📊 Audit Excel Sites
+                🏛️ Audit Critique Global
               </button>
               <button
-                onClick={() => { setOttoInput("Lister les pannes ou urgences actives"); }}
-                className="text-[10px] font-bold bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"
+                onClick={() => { handleSendToOtto("Donne la procédure pour une surchauffe moteur 95°C"); }}
+                className="text-[10px] font-bold bg-white text-rose-700 border border-rose-200 px-2 py-1 rounded-lg hover:bg-rose-50 cursor-pointer shadow-2xs"
               >
-                🚨 Urgences P1
+                🚨 Diagnostic Surchauffe
               </button>
               <button
-                onClick={() => { setOttoInput("Présenter la charte graphique et ergonomie ?"); }}
-                className="text-[10px] font-bold bg-white text-slate-700 border border-slate-200 px-2 py-1 rounded-lg hover:bg-slate-50 cursor-pointer"
+                onClick={() => { handleSendToOtto("Comment diagnostiquer un défaut de tension AVR et alternateur ?"); }}
+                className="text-[10px] font-bold bg-white text-amber-700 border border-amber-200 px-2 py-1 rounded-lg hover:bg-amber-50 cursor-pointer shadow-2xs"
               >
-                🎨 Charte Graphique
+                ⚡ Defaut Tension AVR
+              </button>
+              <button
+                onClick={() => { handleSendToOtto("Quels sont les groupes en retard de vidange ou courroie ?"); }}
+                className="text-[10px] font-bold bg-white text-indigo-700 border border-indigo-200 px-2 py-1 rounded-lg hover:bg-indigo-50 cursor-pointer shadow-2xs"
+              >
+                🛢️ Vidanges & Courroies
+              </button>
+              <button
+                onClick={() => { handleSendToOtto("Analyse l'état des stocks critiques du magasin"); }}
+                className="text-[10px] font-bold bg-white text-emerald-700 border border-emerald-200 px-2 py-1 rounded-lg hover:bg-emerald-50 cursor-pointer shadow-2xs"
+              >
+                📦 Stocks Magasin
               </button>
             </div>
 
