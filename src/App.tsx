@@ -1258,21 +1258,21 @@ export default function App() {
           </div>
 
           {/* Quick status counters & Synchronize button */}
-          <div className="flex items-center gap-3 text-xs font-bold">
+          <div className="flex items-center gap-3 text-[12px] font-bold">
             {/* Sync button */}
             <button
               onClick={handleSyncCloud}
               disabled={isSyncing}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-slate-100 text-black border border-slate-200 rounded-lg transition-all cursor-pointer shadow-sm disabled:opacity-50"
+              className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[12px] rounded-lg transition-all cursor-pointer shadow-md disabled:opacity-50"
             >
-              <RefreshCw size={13} className={`text-blue-600 ${isSyncing ? "animate-spin" : ""}`} />
-              <span>{isSyncing ? "Synchronisation..." : "Synchroniser"}</span>
+              <RefreshCw size={14} className={`text-white ${isSyncing ? "animate-spin" : ""}`} />
+              <span className="font-bold text-[12px] tracking-wide">{isSyncing ? "Synchronisation..." : "Synchroniser"}</span>
             </button>
 
             {/* Logout button */}
             <button
               onClick={() => AuthManager.logout()}
-              className="px-3 py-1.5 bg-slate-100/10 hover:bg-white hover:text-black text-white border border-white/20 rounded-lg transition-all cursor-pointer"
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white border border-slate-700 rounded-lg transition-all cursor-pointer font-bold text-[12px]"
             >
               Déconnexion
             </button>
